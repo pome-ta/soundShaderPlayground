@@ -9,8 +9,6 @@ import {
   editorDiv,
 } from './modules/cmEditor.bundle.js';
 
-import { Fragmen, canvasDiv, option, initMode } from './shaderCanvas/index.js';
-
 import {
   screenDiv,
   statusLogDiv,
@@ -190,9 +188,7 @@ document.body.appendChild(container);
 
 /* -- loadSource */
 let loadSource;
-const fsPaths = ['./shaders/fs/fsMain.js', './shaders/fs/fsMain300es.js'];
-// xxx: 読み込み方法が雑
-const fsPath = initMode ? fsPaths[1] : fsPaths[0];
+const fsPath = './shaders/sound/soundMain.js';
 loadSource = await fetchShader(fsPath);
 
 const fontSizeTheme = EditorView.theme({
