@@ -9,6 +9,8 @@ import {
   editorDiv,
 } from './modules/cmEditor.bundle.js';
 
+import { SoundShader } from './soundCore.js';
+
 import {
   screenDiv,
   statusLogDiv,
@@ -247,7 +249,24 @@ const editor = new EditorView({
 
 bgRectangleSet(editor);
 
-let currentMode = initMode;
+
+let currentMode = 1;
+
+const soundShader = new SoundShader()
+soundShader.render(loadSource, true);
+
+
+const eventName =
+  typeof document.ontouchend !== 'undefined' ? 'touchend' : 'mouseup';
+document.addEventListener(eventName, initAudioContext);
+
+function initAudioContext() {
+  document.removeEventListener(eventName, initAudioContext);
+  // todo: wake up AudioContext
+  soundShader.audioCtx.resume();
+}
+
+// let currentMode = initMode;
 // const fragmen = new Fragmen(option);
 // fragmen.onBuild((status, msg) => {
 //   logText.style.color = logColor[status];
