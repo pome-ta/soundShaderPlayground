@@ -160,6 +160,17 @@ const resOutlineTheme = EditorView.baseTheme({
 });
 
 /* -- main */
+
+const canvasDiv = document.createElement('div');
+canvasDiv.id = 'canvas-div';
+canvasDiv.style.width = '100%';
+canvasDiv.style.height = '100%';
+
+canvasDiv.style.position = 'fixed';
+canvasDiv.style.top = 0;
+canvasDiv.style.left = 0;
+canvasDiv.style.zIndex = 0;
+
 const container = document.createElement('main');
 container.id = 'container-main';
 container.style.height = '100%';
@@ -221,21 +232,21 @@ const editor = new EditorView({
 bgRectangleSet(editor);
 
 let currentMode = initMode;
-const fragmen = new Fragmen(option);
-fragmen.onBuild((status, msg) => {
-  logText.style.color = logColor[status];
-  logText.textContent = msg;
-});
-fragmen.mode = currentMode;
-fragmen.render(sendSource(loadSource));
+// const fragmen = new Fragmen(option);
+// fragmen.onBuild((status, msg) => {
+//   logText.style.color = logColor[status];
+//   logText.textContent = msg;
+// });
+// fragmen.mode = currentMode;
+// fragmen.render(sendSource(loadSource));
 
 modeSelect.value = currentMode;
 modeSelect.style.color = logColor.success;
 
-modeSelect.addEventListener('change', () => {
-  fragmen.mode = parseInt(modeSelect.value);
-  currentMode = fragmen.mode;
-  onChange(editor.state.doc.toString());
-});
+// modeSelect.addEventListener('change', () => {
+//   fragmen.mode = parseInt(modeSelect.value);
+//   currentMode = fragmen.mode;
+//   onChange(editor.state.doc.toString());
+// });
 
 hasTouchScreen() ? mobileEventListeners(editor) : null;

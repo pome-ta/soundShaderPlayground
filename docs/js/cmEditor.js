@@ -26,6 +26,7 @@ import {
   toggleComment,
 } from '@codemirror/commands';
 import { closeBrackets } from '@codemirror/autocomplete';
+import { bracketMatching } from '@codemirror/language';
 
 const editorDiv = document.createElement('div');
 editorDiv.id = 'editor-div';
