@@ -53,10 +53,12 @@ const sendSource = (doc) =>
 
 function onChange(docs) {
   bgRectangleSet(editor);
+  /*
   if (fragmen === null) {
     return;
   }
   fragmen.render(sendSource(docs));
+  */
 }
 
 /**
