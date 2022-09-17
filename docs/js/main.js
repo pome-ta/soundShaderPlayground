@@ -97,7 +97,8 @@ const bgRectangleField = StateField.define({
           //     value.spec.class === bgRectangleClassName;
           //   return !shouldRemove;
           // },
-          filter: (f, t, value) => !(value.class === bgRectangleClassName),
+          filter: (f, t, value) =>
+          !(value.class === bgRectangleClassName),
         });
       }
     }
@@ -180,7 +181,6 @@ const container = document.createElement('main');
 container.id = 'container-main';
 container.style.height = '100%';
 
-
 document.body.style.backgroundColor = 'darkslategray';
 
 const logColor = {
@@ -204,7 +204,6 @@ screenDiv.appendChild(accessoryDiv);
 container.appendChild(screenDiv);
 document.body.appendChild(container);
 
-
 canvasDiv.style.width = '100%';
 canvasDiv.style.height = '100%';
 canvasDiv.backgroundColor = darkBackground;
@@ -213,9 +212,6 @@ canvasDiv.style.position = 'fixed';
 canvasDiv.style.top = 0;
 canvasDiv.style.left = 0;
 canvasDiv.style.zIndex = 0;
-
-
-
 
 /* -- loadSource */
 let loadSource;
@@ -249,12 +245,10 @@ const editor = new EditorView({
 
 bgRectangleSet(editor);
 
-
 let currentMode = 1;
 
-const soundShader = new SoundShader()
+const soundShader = new SoundShader();
 soundShader.render(loadSource, true);
-
 
 const eventName =
   typeof document.ontouchend !== 'undefined' ? 'touchend' : 'mouseup';
@@ -285,3 +279,4 @@ modeSelect.style.color = logColor.success;
 // });
 
 hasTouchScreen() ? mobileEventListeners(editor) : null;
+
