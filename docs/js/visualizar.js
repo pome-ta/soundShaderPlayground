@@ -2,7 +2,7 @@ const setting_height = 2.5;
 
 export function wavVisualize(canvasTag, analyze) {
   const vcctx = canvasTag.getContext('2d');
-  const intendedWidth = document.querySelector('#wrap').clientWidth;
+  const intendedWidth = document.querySelector('#canvas-div').clientWidth;
   canvasTag.setAttribute('width', intendedWidth);
   canvasTag.setAttribute('height', intendedWidth / setting_height);
   const WIDTH = canvasTag.width;
@@ -47,7 +47,7 @@ export function wavVisualize(canvasTag, analyze) {
 
 export function barVisualize(canvasTag, analyze) {
   const vcctx = canvasTag.getContext('2d');
-  const intendedWidth = document.querySelector('#wrap').clientWidth;
+  const intendedWidth = document.querySelector('#canvas-div').clientWidth;
   canvasTag.setAttribute('width', intendedWidth);
   //canvasTag.setAttribute('height', intendedWidth / setting_height);
   canvasTag.setAttribute('height', intendedWidth);
