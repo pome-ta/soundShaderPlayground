@@ -27,6 +27,9 @@ import {
 } from '@codemirror/commands';
 import { closeBrackets } from '@codemirror/autocomplete';
 import { bracketMatching } from '@codemirror/language';
+import { cpp } from '@codemirror/lang-cpp';
+
+import { oneDark } from './theme-custom-dark.js';
 
 const editorDiv = document.createElement('div');
 editorDiv.id = 'editor-div';
@@ -57,6 +60,8 @@ const initExtensions = [
   bracketMatching(),
   EditorView.lineWrapping, // 改行
   tabSize.of(EditorState.tabSize.of(2)),
+  cpp(),
+  oneDark,
   myTheme,
 ];
 

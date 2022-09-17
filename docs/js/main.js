@@ -181,7 +181,7 @@ container.id = 'container-main';
 container.style.height = '100%';
 
 
-//document.body.backgroundColor = darkBackground;
+document.body.style.backgroundColor = 'darkslategray';
 
 const logColor = {
   success: '#1da1f2',
