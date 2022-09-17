@@ -166,7 +166,7 @@ const resOutlineTheme = EditorView.baseTheme({
 const darkBackground = '#21252b';
 const canvasDiv = document.createElement('div');
 canvasDiv.id = 'canvas-div';
-/*
+
 canvasDiv.style.width = '100%';
 canvasDiv.style.height = '100%';
 canvasDiv.backgroundColor = darkBackground;
@@ -175,7 +175,11 @@ canvasDiv.style.position = 'fixed';
 canvasDiv.style.top = 0;
 canvasDiv.style.left = 0;
 canvasDiv.style.zIndex = 0;
-*/
+
+const wave = document.createElement('canvas');
+wave.id = 'waveVisualizer'
+const bar = document.createElement('canvas');
+bar.id = 'barVisualizer'
 
 const container = document.createElement('main');
 container.id = 'container-main';
@@ -200,7 +204,10 @@ accessoryDiv.appendChild(buttonArea);
 screenDiv.appendChild(editorDiv);
 screenDiv.appendChild(accessoryDiv);
 
-//container.appendChild(canvasDiv);
+
+canvasDiv.appendChild(wave)
+canvasDiv.appendChild(bar)
+container.appendChild(canvasDiv);
 container.appendChild(screenDiv);
 document.body.appendChild(container);
 

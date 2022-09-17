@@ -1,3 +1,6 @@
+import { wavVisualize } from './visualizar.js';
+import { barVisualize } from './visualizar.js';
+
 let VERTEX_SHADER_SOURCE;
 let FRAGMENT_SHADER_SOURCE_HEADER;
 let FRAGMENT_SHADER_SOURCE_FOOTER;
@@ -54,11 +57,11 @@ export class SoundShader {
   init() {
     this.canvas = document.createElement('canvas');
 
-    //this.waveCanvas = document.querySelector('#waveVisualizer');
-    //this.barCanvas = document.querySelector('#barVisualizer');
+    this.waveCanvas = document.querySelector('#waveVisualizer');
+    this.barCanvas = document.querySelector('#barVisualizer');
 
-    //const wrap = document.querySelector('#wrap');
-    //wrap.appendChild(this.canvas);
+    const wrap = document.querySelector('#canvas-div');
+    wrap.appendChild(this.canvas);
 
     this.canvas.width = BUFFER_WIDTH;
     this.canvas.height = BUFFER_HEIGHT;
@@ -174,8 +177,8 @@ export class SoundShader {
     this.audioAnalyserNode.minDecibels = -90;
     this.audioAnalyserNode.maxDecibels = -10;
 
-    //wavVisualize(this.waveCanvas, this.audioAnalyserNode);
-    //barVisualize(this.barCanvas, this.audioAnalyserNode);
+    wavVisualize(this.waveCanvas, this.audioAnalyserNode);
+    barVisualize(this.barCanvas, this.audioAnalyserNode);
     this.audioBufferSourceNode.connect(this.audioAnalyserNode);
     this.audioAnalyserNode.connect(this.audioCtx.destination);
     this.audioBufferSourceNode.buffer = buffer;
