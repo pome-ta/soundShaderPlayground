@@ -240,7 +240,13 @@ const fontSizeTheme = EditorView.theme({
   },
 });
 
-const myKeyMpas = [{ key: 'Alt-Enter', run: selectAll }];
+const updateSoundShader = () => {
+  const currentShader = editor.state.doc;
+  soundShader.render(currentShader, true);
+};
+
+const myKeyMpas = [{ key: 'Alt-Enter', run: updateSoundShader }];
+
 const extensions = [
   fontSizeTheme,
   ...initExtensions,
@@ -297,5 +303,3 @@ modeSelect.style.color = logColor.success;
 // });
 
 hasTouchScreen() ? mobileEventListeners(editor) : null;
-
-console.log(editor);
