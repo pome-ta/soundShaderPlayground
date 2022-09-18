@@ -19110,4 +19110,4 @@ const initExtensions = [
   myTheme,
 ];
 
-export { Decoration, EditorSelection, EditorState, EditorView, StateEffect, StateField, cursorCharLeft, cursorCharRight, cursorLineDown, cursorLineUp, editorDiv, highlightSpecialChars, indentSelection, initExtensions, redo, selectAll, selectLine, toggleComment, undo };
+export { Decoration, EditorSelection, EditorState, EditorView, StateEffect, StateField, cursorCharLeft, cursorCharRight, cursorLineDown, cursorLineUp, editorDiv, highlightSpecialChars, indentSelection, initExtensions, keymap, redo, selectAll, selectLine, toggleComment, undo };

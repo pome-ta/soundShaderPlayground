@@ -7,6 +7,8 @@ import {
   Decoration,
   initExtensions,
   editorDiv,
+  selectAll,
+  keymap,
 } from './modules/cmEditor.bundle.js';
 
 import { SoundShader } from './soundCore.js';
@@ -97,8 +99,7 @@ const bgRectangleField = StateField.define({
           //     value.spec.class === bgRectangleClassName;
           //   return !shouldRemove;
           // },
-          filter: (f, t, value) =>
-          !(value.class === bgRectangleClassName),
+          filter: (f, t, value) => !(value.class === bgRectangleClassName),
         });
       }
     }
@@ -177,20 +178,18 @@ canvasDiv.style.left = 0;
 canvasDiv.style.zIndex = 0;
 
 const wave = document.createElement('canvas');
-wave.id = 'waveVisualizer'
-
-wave.style.position = 'fixed';
-wave.style.top = 0;
-wave.style.left = 0;
-wave.style.zIndex = 0;
+wave.id = 'waveVisualizer';
+// wave.style.position = 'fixed';
+// wave.style.top = 0;
+// wave.style.left = 0;
+// wave.style.zIndex = 0;
 
 const bar = document.createElement('canvas');
-bar.id = 'barVisualizer'
-bar.style.position = 'fixed';
-bar.style.top = 0;
-bar.style.left = 0;
-bar.style.zIndex = 1;
-
+bar.id = 'barVisualizer';
+// bar.style.position = 'fixed';
+// bar.style.top = 0;
+// bar.style.left = 0;
+// bar.style.zIndex = 1;
 
 const container = document.createElement('main');
 container.id = 'container-main';
@@ -215,9 +214,8 @@ accessoryDiv.appendChild(buttonArea);
 screenDiv.appendChild(editorDiv);
 screenDiv.appendChild(accessoryDiv);
 
-
-canvasDiv.appendChild(wave)
-canvasDiv.appendChild(bar)
+canvasDiv.appendChild(wave);
+canvasDiv.appendChild(bar);
 container.appendChild(canvasDiv);
 container.appendChild(screenDiv);
 document.body.appendChild(container);
@@ -242,6 +240,7 @@ const fontSizeTheme = EditorView.theme({
   },
 });
 
+const myKeyMpas = [{ key: 'Alt-Enter', run: selectAll }];
 const extensions = [
   fontSizeTheme,
   ...initExtensions,
@@ -250,6 +249,7 @@ const extensions = [
   bgRectangleTheme,
   //whitespaceShow,
   updateCallback,
+  keymap.of([...myKeyMpas]),
 ];
 const state = EditorState.create({
   doc: loadSource,
@@ -298,3 +298,4 @@ modeSelect.style.color = logColor.success;
 
 hasTouchScreen() ? mobileEventListeners(editor) : null;
 
+console.log(editor);

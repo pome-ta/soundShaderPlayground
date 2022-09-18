@@ -12,6 +12,7 @@ import {
   highlightActiveLine,
   highlightSpecialChars,
   Decoration,
+  keymap,
 } from '@codemirror/view';
 import {
   undo,
@@ -67,6 +68,7 @@ const initExtensions = [
 
 export {
   EditorView,
+  keymap,
   highlightSpecialChars,
   EditorState,
   EditorSelection,
