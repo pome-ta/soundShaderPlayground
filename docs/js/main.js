@@ -22,7 +22,7 @@ import {
   buttonArea,
 } from './setDOMs.js';
 
-import { mobileEventListeners } from './mobileEvents.js';
+import { mobileEventListeners, reIndentButton } from './mobileEvents.js';
 
 const hasTouchScreen = () => {
   if (navigator.maxTouchPoints > 0) {
@@ -70,8 +70,13 @@ function onChange(docs) {
  */
 const bgRectangleClassName = 'cm-bgRectangle';
 const bgRectangleMark = Decoration.mark({ class: bgRectangleClassName });
+const baseRectColor = '#23232380';
+const flashRectColor = '#4169e1';
+
+document.documentElement.style.setProperty('--bgRectangleColor', baseRectColor);
+
 const bgRectangleTheme = EditorView.baseTheme({
-  '.cm-bgRectangle': { backgroundColor: '#23232380' },
+  '.cm-bgRectangle': { backgroundColor: 'var(--bgRectangleColor)' },
 });
 
 const bgRectEffect = {
@@ -222,7 +227,7 @@ document.body.appendChild(container);
 
 canvasDiv.style.width = '100%';
 canvasDiv.style.height = '100%';
-canvasDiv.backgroundColor = darkBackground;
+canvasDiv.style.backgroundColor = darkBackground;
 
 canvasDiv.style.position = 'fixed';
 canvasDiv.style.top = 0;
@@ -240,9 +245,17 @@ const fontSizeTheme = EditorView.theme({
   },
 });
 
+//const baseRectColor = '#23232380';
+//const flashRectColor = '#4169e1';
+
+
 const updateSoundShader = () => {
   const currentShader = editor.state.doc;
   soundShader.render(currentShader, true);
+  document.documentElement.style.setProperty('--bgRectangleColor', flashRectColor);
+  setTimeout(function() {
+    document.documentElement.style.setProperty('--bgRectangleColor', baseRectColor);
+  }, 150);
 };
 
 const myKeyMpas = [{ key: 'Alt-Enter', run: updateSoundShader }];
@@ -273,10 +286,11 @@ let currentMode = 1;
 
 const soundShader = new SoundShader();
 soundShader.render(loadSource, true);
+//soundShader.render(loadSource, false);
 
 const eventName =
   typeof document.ontouchend !== 'undefined' ? 'touchend' : 'mouseup';
-document.addEventListener(eventName, initAudioContext);
+//document.addEventListener(eventName, initAudioContext);
 
 function initAudioContext() {
   document.removeEventListener(eventName, initAudioContext);
@@ -303,3 +317,9 @@ modeSelect.style.color = logColor.success;
 // });
 
 hasTouchScreen() ? mobileEventListeners(editor) : null;
+if (hasTouchScreen()) {
+  reIndentButton.addEventListener('click', updateSoundShader);
+  reIndentButton.addEventListener(eventName, initAudioContext);
+}
+
+//console.log(document.documentElement.style);

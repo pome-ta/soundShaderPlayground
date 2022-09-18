@@ -123,9 +123,13 @@ export const mobileEventListeners = (editor) => {
   });
 
   reIndentButton.addEventListener('click', () => {
-    selectAll(editor);
-    indentSelection(editor);
-    cursorLineUp(editor);
+    //selectAll(editor);
+    //indentSelection(editor);
+    //cursorLineUp(editor);
     //editor.focus();
   });
 };
+
+export {reIndentButton}
+
+
