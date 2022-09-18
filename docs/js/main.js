@@ -178,8 +178,19 @@ canvasDiv.style.zIndex = 0;
 
 const wave = document.createElement('canvas');
 wave.id = 'waveVisualizer'
+
+wave.style.position = 'fixed';
+wave.style.top = 0;
+wave.style.left = 0;
+wave.style.zIndex = 0;
+
 const bar = document.createElement('canvas');
 bar.id = 'barVisualizer'
+bar.style.position = 'fixed';
+bar.style.top = 0;
+bar.style.left = 0;
+bar.style.zIndex = 1;
+
 
 const container = document.createElement('main');
 container.id = 'container-main';

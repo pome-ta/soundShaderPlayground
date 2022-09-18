@@ -4,7 +4,8 @@ export function wavVisualize(canvasTag, analyze) {
   const vcctx = canvasTag.getContext('2d');
   const intendedWidth = document.querySelector('#canvas-div').clientWidth;
   canvasTag.setAttribute('width', intendedWidth);
-  canvasTag.setAttribute('height', intendedWidth / setting_height);
+  //canvasTag.setAttribute('height', intendedWidth / setting_height);
+  canvasTag.setAttribute('height', intendedWidth);
   const WIDTH = canvasTag.width;
   const HEIGHT = canvasTag.height;
 
@@ -22,8 +23,11 @@ export function wavVisualize(canvasTag, analyze) {
     wavAnalyze.getByteTimeDomainData(dataArray);
 
     //vcctx.fillStyle = 'rgb(233, 233, 233)';
-    vcctx.fillStyle = 'rgb(35, 35, 35)';
-    vcctx.fillRect(0, 0, WIDTH, HEIGHT);
+    //vcctx.fillStyle = 'rgba(35, 35, 35, 1)';
+    //vcctx.fillRect(0, 0, WIDTH, HEIGHT);
+    //vcctx.fillStyle = 'rgba(35, 35, 35, 0)';
+    //vcctx.fillRect(0, 0, WIDTH, HEIGHT);
+    vcctx.clearRect(0, 0, WIDTH, HEIGHT);
     vcctx.lineWidth = 1;
     //vcctx.strokeStyle = 'rgb(35, 35, 35)';
     vcctx.strokeStyle = 'rgb(233, 233, 233)';
@@ -69,8 +73,9 @@ export function barVisualize(canvasTag, analyze) {
     barAnalyze.getByteFrequencyData(dataArrayAlt);
 
     //vcctx.fillStyle = 'rgb(233, 233, 233)';
-    vcctx.fillStyle = 'rgb(35, 35, 35)';
-    vcctx.fillRect(0, 0, WIDTH, HEIGHT);
+    //vcctx.fillStyle = 'rgb(35, 35, 35)';
+    //vcctx.fillRect(0, 0, WIDTH, HEIGHT);
+    vcctx.clearRect(0, 0, WIDTH, HEIGHT);
 
     const barWidth = (WIDTH / bufferLengthAlt) * 2.5;
     //const barWidth = WIDTH / dataArrayLength;
