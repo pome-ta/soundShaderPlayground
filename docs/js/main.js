@@ -211,7 +211,8 @@ const logColor = {
   error: '#ff517b',
 };
 
-logText.textContent = ' ● ready';
+//logText.textContent = ' ● ready';
+logText.textContent = 'call a sound [Alt-Enter]'
 logText.style.color = logColor['warn'];
 
 statusLogDiv.appendChild(logText);
