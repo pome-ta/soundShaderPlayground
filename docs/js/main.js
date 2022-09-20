@@ -216,7 +216,7 @@ logText.textContent = 'call a sound [Alt-Enter]'
 logText.style.color = logColor['warn'];
 
 statusLogDiv.appendChild(logText);
-statusLogDiv.appendChild(modeSelect);
+//statusLogDiv.appendChild(modeSelect);
 
 accessoryDiv.appendChild(statusLogDiv);
 accessoryDiv.appendChild(buttonArea);
