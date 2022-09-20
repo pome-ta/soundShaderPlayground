@@ -4250,7 +4250,7 @@ function scrollRectIntoView(dom, rect, side, x, y, xMargin, yMargin, ltr) {
             }
             else {
                 if (cur.scrollHeight <= cur.clientHeight && cur.scrollWidth <= cur.clientWidth) {
-                    cur = cur.parentNode;
+                    cur = cur.assignedSlot || cur.parentNode;
                     continue;
                 }
                 let rect = cur.getBoundingClientRect();
@@ -4301,24 +4301,28 @@ function scrollRectIntoView(dom, rect, side, x, y, xMargin, yMargin, ltr) {
                     win.scrollBy(moveX, moveY);
                 }
                 else {
+                    let movedX = 0, movedY = 0;
                     if (moveY) {
                         let start = cur.scrollTop;
                         cur.scrollTop += moveY;
-                        moveY = cur.scrollTop - start;
+                        movedY = cur.scrollTop - start;
                     }
                     if (moveX) {
                         let start = cur.scrollLeft;
                         cur.scrollLeft += moveX;
-                        moveX = cur.scrollLeft - start;
+                        movedX = cur.scrollLeft - start;
                     }
-                    rect = { left: rect.left - moveX, top: rect.top - moveY,
-                        right: rect.right - moveX, bottom: rect.bottom - moveY };
+                    rect = { left: rect.left - movedX, top: rect.top - movedY,
+                        right: rect.right - movedX, bottom: rect.bottom - movedY };
+                    if (movedX && Math.abs(movedX - moveX) < 1)
+                        x = "nearest";
+                    if (movedY && Math.abs(movedY - moveY) < 1)
+                        y = "nearest";
                 }
             }
             if (top)
                 break;
             cur = cur.assignedSlot || cur.parentNode;
-            x = y = "nearest";
         }
         else if (cur.nodeType == 11) { // A shadow root
             cur = cur.host;
@@ -8797,10 +8801,10 @@ class DecorationComparator {
 
 function visiblePixelRange(dom, paddingTop) {
     let rect = dom.getBoundingClientRect();
-    let left = Math.max(0, rect.left), right = Math.min(innerWidth, rect.right);
-    let top = Math.max(0, rect.top), bottom = Math.min(innerHeight, rect.bottom);
-    let body = dom.ownerDocument.body;
-    for (let parent = dom.parentNode; parent && parent != body;) {
+    let doc = dom.ownerDocument, win = doc.defaultView;
+    let left = Math.max(0, rect.left), right = Math.min(win.innerWidth, rect.right);
+    let top = Math.max(0, rect.top), bottom = Math.min(win.innerHeight, rect.bottom);
+    for (let parent = dom.parentNode; parent && parent != doc.body;) {
         if (parent.nodeType == 1) {
             let elt = parent;
             let style = window.getComputedStyle(elt);
@@ -8995,7 +8999,7 @@ class ViewState {
             if (inView)
                 measureContent = true;
         }
-        if (!this.inView)
+        if (!this.inView && !this.scrollTarget)
             return 0;
         let contentWidth = dom.clientWidth;
         if (this.contentDOMWidth != contentWidth || this.editorHeight != view.scrollDOM.clientHeight) {
@@ -9439,8 +9443,8 @@ const baseTheme$1 = /*@__PURE__*/buildTheme("." + baseThemeID, {
     "&.cm-focused .cm-cursor": {
         display: "block"
     },
-    "&light .cm-activeLine": { backgroundColor: "#f3f9ff" },
-    "&dark .cm-activeLine": { backgroundColor: "#223039" },
+    "&light .cm-activeLine": { backgroundColor: "#cceeff44" },
+    "&dark .cm-activeLine": { backgroundColor: "#99eeff33" },
     "&light .cm-specialChar": { color: "red" },
     "&dark .cm-specialChar": { color: "#f78" },
     ".cm-gutters": {
@@ -10313,7 +10317,7 @@ class EditorView {
     /**
     @internal
     */
-    get win() { return this.dom.ownerDocument.defaultView; }
+    get win() { return this.dom.ownerDocument.defaultView || window; }
     dispatch(...input) {
         this._dispatch(input.length == 1 && input[0] instanceof Transaction ? input[0]
             : this.state.update(...input));
@@ -11577,9 +11581,15 @@ class MatchDecorator {
         if (decorate) {
             this.addMatch = (match, view, from, add) => decorate(add, from, from + match[0].length, match, view);
         }
+        else if (typeof decoration == "function") {
+            this.addMatch = (match, view, from, add) => {
+                let deco = decoration(match, view, from);
+                if (deco)
+                    add(from, from + match[0].length, deco);
+            };
+        }
         else if (decoration) {
-            let getDeco = typeof decoration == "function" ? decoration : () => decoration;
-            this.addMatch = (match, view, from, add) => add(from, from + match[0].length, getDeco(match, view, from));
+            this.addMatch = (match, _view, from, add) => add(from, from + match[0].length, decoration);
         }
         else {
             throw new RangeError("Either 'decorate' or 'decoration' should be provided to MatchDecorator");
@@ -11820,8 +11830,6 @@ const activeLineHighlighter = /*@__PURE__*/ViewPlugin.fromClass(class {
     getDeco(view) {
         let lastLineStart = -1, deco = [];
         for (let r of view.state.selection.ranges) {
-            if (!r.empty)
-                return Decoration.none;
             let line = view.lineBlockAt(r.head);
             if (line.from > lastLineStart) {
                 deco.push(lineDeco.range(line.from));
@@ -12236,14 +12244,13 @@ const activeLineGutterMarker = /*@__PURE__*/new class extends GutterMarker {
 };
 const activeLineGutterHighlighter = /*@__PURE__*/gutterLineClass.compute(["selection"], state => {
     let marks = [], last = -1;
-    for (let range of state.selection.ranges)
-        if (range.empty) {
-            let linePos = state.doc.lineAt(range.head).from;
-            if (linePos > last) {
-                last = linePos;
-                marks.push(activeLineGutterMarker.range(linePos));
-            }
+    for (let range of state.selection.ranges) {
+        let linePos = state.doc.lineAt(range.head).from;
+        if (linePos > last) {
+            last = linePos;
+            marks.push(activeLineGutterMarker.range(linePos));
         }
+    }
     return RangeSet.of(marks);
 });
 /**
@@ -13814,6 +13821,8 @@ class Rule {
         this.context = context;
         this.next = next;
     }
+    get opaque() { return this.mode == 0 /* Opaque */; }
+    get inherit() { return this.mode == 1 /* Inherit */; }
     sort(other) {
         if (!other || other.depth < this.depth) {
             this.next = other;
@@ -14065,7 +14074,7 @@ const tags = {
     moduleKeyword: t(keyword),
     /// An operator.
     operator,
-    /// An [operator](#highlight.tags.operator) that defines something.
+    /// An [operator](#highlight.tags.operator) that dereferences something.
     derefOperator: t(operator),
     /// Arithmetic-related [operator](#highlight.tags.operator).
     arithmeticOperator: t(operator),
