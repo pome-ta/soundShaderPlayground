@@ -116,6 +116,9 @@ const bgRectangleField = StateField.define({
 function bgRectangleSet(view) {
   const { state, dispatch } = view;
   const { from, to } = state.selection.main.extend(0, state.doc.length);
+  if (!from && !to) {
+    return
+  }
   const decoSet = state.field(bgRectangleField, false);
 
   const addFromTO = (from, to) => bgRectEffect.add.of({ from, to });
