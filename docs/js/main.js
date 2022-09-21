@@ -118,7 +118,7 @@ function bgRectangleSet(view) {
   const { state, dispatch } = view;
   const { from, to } = state.selection.main.extend(0, state.doc.length);
   if (!from && !to) {
-    return
+    return;
   }
   const decoSet = state.field(bgRectangleField, false);
 
@@ -213,7 +213,7 @@ const logColor = {
 };
 
 //logText.textContent = ' ● ready';
-logText.textContent = 'call a sound [Alt-Enter]'
+logText.textContent = 'call a sound [Alt-Enter]';
 logText.style.color = logColor['warn'];
 
 statusLogDiv.appendChild(logText);
@@ -253,13 +253,18 @@ const fontSizeTheme = EditorView.theme({
 //const baseRectColor = '#23232380';
 //const flashRectColor = '#4169e1';
 
-
 const updateSoundShader = () => {
   const currentShader = editor.state.doc;
   soundShader.render(currentShader, true);
-  document.documentElement.style.setProperty('--bgRectangleColor', flashRectColor);
-  setTimeout(function() {
-    document.documentElement.style.setProperty('--bgRectangleColor', baseRectColor);
+  document.documentElement.style.setProperty(
+    '--bgRectangleColor',
+    flashRectColor
+  );
+  setTimeout(function () {
+    document.documentElement.style.setProperty(
+      '--bgRectangleColor',
+      baseRectColor
+    );
   }, 150);
 };
 

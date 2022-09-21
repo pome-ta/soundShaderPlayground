@@ -130,6 +130,4 @@ export const mobileEventListeners = (editor) => {
   });
 };
 
-export {reIndentButton}
-
-
+export { reIndentButton };
