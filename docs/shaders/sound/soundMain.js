@@ -13,11 +13,9 @@ float sine(float phase) {
   return sin(TAU * phase);
 }
 
-
 float pitch(float p) {
   return pow(2.0, p / 12.0) * 440.0;
 }
-
 
 float saw(float phase) {
   float s = 0.0;
@@ -28,7 +26,6 @@ float saw(float phase) {
 }
 
 
-
 float square(float phase) {
   float s = 0.0;
   for (int k=1; k<8; k++) {
@@ -36,7 +33,6 @@ float square(float phase) {
   }
   return (4.0 / PI) * s;
 }
-
 
 float drone(float time, float semitones[4]) {
   float s = 0.0;
@@ -53,7 +49,6 @@ float drone(float time, float semitones[4]) {
   return s;
 }
 
-
 vec2 mainSound(float time){
   float bpm = timeToBeat(time);
   float tempo = sine((mod(bpm, 4.0) >= 1.0 ? 440.0 : 880.0) * time) * exp(-1e2 * fract(bpm));
@@ -68,11 +63,9 @@ vec2 mainSound(float time){
   semitones2[0] = -2.0; semitones2[1] = 3.0;
   semitones2[2] = 7.0; semitones2[3] = 12.0;
   
-  
   float timing = PI * bpm / 64.0;
   float semi1 = drone(time, semitones1) * cos(timing);
   float semi2 = drone(time, semitones2) * sin(timing);
-  
   
   s = max(semi1, semi2);
   float f = sin(TAU * bpm * 8.0);

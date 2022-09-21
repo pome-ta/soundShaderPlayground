@@ -70,7 +70,8 @@ function onChange(docs) {
  */
 const bgRectangleClassName = 'cm-bgRectangle';
 const bgRectangleMark = Decoration.mark({ class: bgRectangleClassName });
-const baseRectColor = '#23232380';
+//const baseRectColor = '#23232380';
+const baseRectColor = '#232323aa';
 const flashRectColor = '#4169e1';
 
 document.documentElement.style.setProperty('--bgRectangleColor', baseRectColor);
@@ -187,17 +188,17 @@ canvasDiv.style.zIndex = 0;
 
 const wave = document.createElement('canvas');
 wave.id = 'waveVisualizer';
-// wave.style.position = 'fixed';
-// wave.style.top = 0;
-// wave.style.left = 0;
-// wave.style.zIndex = 0;
+wave.style.position = 'fixed';
+wave.style.top = 0;
+wave.style.left = 0;
+wave.style.zIndex = 0;
 
 const bar = document.createElement('canvas');
 bar.id = 'barVisualizer';
-// bar.style.position = 'fixed';
-// bar.style.top = 0;
-// bar.style.left = 0;
-// bar.style.zIndex = 1;
+bar.style.position = 'fixed';
+bar.style.top = 0;
+bar.style.left = 0;
+bar.style.zIndex = 1;
 
 const container = document.createElement('main');
 container.id = 'container-main';

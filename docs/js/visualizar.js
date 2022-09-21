@@ -10,8 +10,8 @@ export function wavVisualize(canvasTag, analyze) {
   const vcctx = canvasTag.getContext('2d');
   const intendedWidth = getIntendedWidth();
   canvasTag.setAttribute('width', intendedWidth);
-  canvasTag.setAttribute('height', intendedWidth / setting_height);
-  // canvasTag.setAttribute('height', intendedWidth);
+  //canvasTag.setAttribute('height', intendedWidth / setting_height);
+  canvasTag.setAttribute('height', intendedWidth);
   const WIDTH = canvasTag.width;
   const HEIGHT = canvasTag.height;
 
