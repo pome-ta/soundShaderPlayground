@@ -333,4 +333,3 @@ if (hasTouchScreen()) {
   reIndentButton.addEventListener(eventName, initAudioContext);
 }
 
-//console.log(document.documentElement.style);
