@@ -56,6 +56,8 @@ export class SoundShader {
 
   init() {
     this.canvas = document.createElement('canvas');
+    this.canvas.style.width = '100%';
+    this.canvas.style.height = '100%';
 
     this.waveCanvas = document.querySelector('#waveVisualizer');
     this.barCanvas = document.querySelector('#barVisualizer');
