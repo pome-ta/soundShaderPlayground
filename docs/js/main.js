@@ -297,7 +297,6 @@ let currentMode = 1;
 
 const soundShader = new SoundShader();
 soundShader.render(loadSource, true);
-//soundShader.render(loadSource, false);
 
 const eventName =
   typeof document.ontouchend !== 'undefined' ? 'touchend' : 'mouseup';

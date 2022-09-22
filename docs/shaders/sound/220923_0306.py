@@ -8,13 +8,16 @@ const float TAU = PI * 2.0;
 float timeToBeat(float t) { return t / 60.0 * BPM; }
 float beatToTime(float b) { return b / BPM * 60.0; }
 
-float sine(float phase) { return sin(TAU * phase); }
+float sine(float p) { return sin(TAU * p); }
 float pitch(float p) { return pow(2.0, p / 12.0) * 440.0; }
 
 
 float kick(float t) {
-  float c = clamp(1.1 * asin(cos(120.0 * t -28.0 * exp(-32.0 * t))), -1.0, 1.0)
-  return c * exp(-4.0 * t);
+  float ce = cos(120.0 * t -28.0 * exp(-32.0 * t));
+  float a = asin(ce);
+  float c = clamp(1.1 * a, -1.0, 1.0);
+  //return c * exp(-4.0 * t);
+  return a;
 }
 
 
