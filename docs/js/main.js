@@ -71,7 +71,7 @@ function onChange(docs) {
 const bgRectangleClassName = 'cm-bgRectangle';
 const bgRectangleMark = Decoration.mark({ class: bgRectangleClassName });
 //const baseRectColor = '#23232380';
-const baseRectColor = '#232323aa';
+const baseRectColor = '#232323bb';
 const flashRectColor = '#4169e1';
 
 document.documentElement.style.setProperty('--bgRectangleColor', baseRectColor);
