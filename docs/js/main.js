@@ -105,7 +105,8 @@ const bgRectangleField = StateField.define({
           //     value.spec.class === bgRectangleClassName;
           //   return !shouldRemove;
           // },
-          filter: (f, t, value) => !(value.class === bgRectangleClassName),
+          filter: (f, t, value) =>
+          !(value.class === bgRectangleClassName),
         });
       }
     }
