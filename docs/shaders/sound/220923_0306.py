@@ -17,14 +17,17 @@ float kick(float t) {
   float a = asin(ce);
   float c = clamp(1.1 * a, -1.0, 1.0);
   //return c * exp(-4.0 * t);
-  return a;
+  // return a;
+  return ce;
 }
 
 
 vec2 mainSound(float time){
   float bpm = timeToBeat(time);
-  float k = kick(fract(bpm));
+  // float k = kick(fract(bpm));
+  float k = kick(bpm);
 
   return vec2(k);
 }
+
 
