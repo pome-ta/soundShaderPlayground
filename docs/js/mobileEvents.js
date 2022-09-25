@@ -39,7 +39,7 @@ export const mobileEventListeners = (editor) => {
       visualViewport.pageTop;
     const editorDivHeight = visualViewport.height - upBottom;
     accessoryDiv.style.bottom = `${upBottom}px`;
-    editorDiv.style.height = `${editorDivHeight}px`;
+    //editorDiv.style.height = `${editorDivHeight}px`;
     /*
     console.log('---')
     console.log(`innerHeight: ${window.innerHeight}`)
