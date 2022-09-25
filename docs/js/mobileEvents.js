@@ -1,4 +1,5 @@
 import {
+  editorDiv,
   EditorSelection,
   undo,
   redo,
@@ -36,8 +37,16 @@ export const mobileEventListeners = (editor) => {
       visualViewport.height +
       visualViewport.offsetTop -
       visualViewport.pageTop;
-
+    const editorDivHeight = visualViewport.height - upBottom;
     accessoryDiv.style.bottom = `${upBottom}px`;
+    editorDiv.style.height = `${editorDivHeight}px`;
+    /*
+    console.log('---')
+    console.log(`innerHeight: ${window.innerHeight}`)
+    console.log(`height: ${visualViewport.height}`)
+    console.log(`offsetTop: ${visualViewport.offsetTop}`)
+    console.log(`pageTop: ${visualViewport.pageTop}`)
+    */
   }
 
   function moveCaret(pos) {
