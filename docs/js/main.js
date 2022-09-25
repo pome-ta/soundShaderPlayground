@@ -24,6 +24,10 @@ import {
 
 import { mobileEventListeners, reIndentButton } from './mobileEvents.js';
 
+
+const isDev = true;
+
+
 const hasTouchScreen = () => {
   if (navigator.maxTouchPoints > 0) {
     return true;
@@ -242,7 +246,12 @@ canvasDiv.style.zIndex = 0;
 
 /* -- loadSource */
 let loadSource;
-const fsPath = './shaders/sound/soundMain.js';
+
+//const fsPath = './shaders/sound/soundMain.js';
+//const fsPath = './shaders/sound/soundDev.js';
+const fsPath = isDev ?
+    './shaders/sound/soundDev.js':
+        './shaders/sound/soundMain.js';
 loadSource = await fetchShader(fsPath);
 
 const fontSizeTheme = EditorView.theme({
