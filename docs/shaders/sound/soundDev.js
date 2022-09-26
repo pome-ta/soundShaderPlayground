@@ -19,7 +19,8 @@ float kick(float t) {
   //return c * exp(-4.0 * t);
   // return a;
   //return ce;
-  float rt = 
+  float rt = cos(120.0 * t -28.0 * exp(-32.0 * t));
+  return rt;
 }
 
 
