@@ -282,7 +282,7 @@ const extensions = [
   ...initExtensions,
   whitespaceShow,
   resOutlineTheme,
-  bgRectangleTheme,
+  //bgRectangleTheme,
   //whitespaceShow,
   updateCallback,
   keymap.of([...myKeyMpas]),
@@ -339,3 +339,18 @@ if (hasTouchScreen()) {
   reIndentButton.addEventListener(eventName, initAudioContext);
 }
 
+/*
+document.addEventListener('close', ()=> {
+  console.log('c')
+});
+*/
+
+/*
+
+window.addEventListener('beforeunload', (event) => {
+  // Cancel the event as stated by the standard.
+  event.preventDefault();
+  // Chrome requires returnValue to be set.
+  event.returnValue = '';
+  console.log('c')
+});*/

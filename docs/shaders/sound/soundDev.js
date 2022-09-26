@@ -19,17 +19,23 @@ float kick(float t) {
   //return c * exp(-4.0 * t);
   // return a;
   //return ce;
-  float rt = cos(120.0 * t -28.0 * exp(-32.0 * t));
-  return rt;
+  float rootSine = cos(sine(32.0 * t)) * exp(-8.0 * t);
+  return asin(rootSine);
+}
+
+float bb(float t) {
+  float c = clamp(1.1 * asin(cos(120.0 * t -28.0 * exp(-32.0 * t))), -1.0, 1.0);
+  return c * exp(-4.0 * t);
 }
 
 
 vec2 mainSound(float time){
   float bpm = timeToBeat(time);
   // float k = kick(fract(bpm));
-  float k = kick(bpm);
+  float k = kick(time);
+  float seq = k * fract(-1.0 * time);
 
-  //return vec2(k);
-  return vec2(0.0);
+  return vec2(seq);
+  //return vec2(0.0);
 }
 
