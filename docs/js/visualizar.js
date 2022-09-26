@@ -2,7 +2,7 @@ const setting_height = 2.5;
 
 const getIntendedWidth = () => {
   const clinetDiv = document.querySelector('#canvas-div');
-  const intendedWidth = Math.min(clinetDiv.clientWidth, clinetDiv.clientWidth);
+  const intendedWidth = Math.max(clinetDiv.clientWidth, clinetDiv.clientHeight);
   return intendedWidth;
 };
 
@@ -11,7 +11,12 @@ export function wavVisualize(canvasTag, analyze) {
   const intendedWidth = getIntendedWidth();
   canvasTag.setAttribute('width', intendedWidth);
   //canvasTag.setAttribute('height', intendedWidth / setting_height);
-  canvasTag.setAttribute('height', intendedWidth);
+  // const intendedWidth = document.querySelector('#canvas-div').clientWidth;
+  const intendedHeight = Math.min(
+    intendedWidth,
+    document.querySelector('#canvas-div').clientHeight
+  );
+  canvasTag.setAttribute('height', intendedHeight);
   const WIDTH = canvasTag.width;
   const HEIGHT = canvasTag.height;
 
@@ -57,10 +62,15 @@ export function wavVisualize(canvasTag, analyze) {
 
 export function barVisualize(canvasTag, analyze) {
   const vcctx = canvasTag.getContext('2d');
-  const intendedWidth = document.querySelector('#canvas-div').clientWidth;
+  // const intendedWidth = document.querySelector('#canvas-div').clientWidth;
+  const intendedWidth = getIntendedWidth();
   canvasTag.setAttribute('width', intendedWidth);
   //canvasTag.setAttribute('height', intendedWidth / setting_height);
-  canvasTag.setAttribute('height', intendedWidth);
+  const intendedHeight = Math.min(
+    intendedWidth,
+    document.querySelector('#canvas-div').clientHeight
+  );
+  canvasTag.setAttribute('height', intendedHeight);
   const WIDTH = canvasTag.width;
   const HEIGHT = canvasTag.height;
   //console.log('t' + HEIGHT);

@@ -1,5 +1,4 @@
-import { wavVisualize } from './visualizar.js';
-import { barVisualize } from './visualizar.js';
+import { wavVisualize, barVisualize } from './visualizar.js';
 
 let VERTEX_SHADER_SOURCE;
 let FRAGMENT_SHADER_SOURCE_HEADER;
