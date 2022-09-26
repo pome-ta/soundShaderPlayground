@@ -105,8 +105,7 @@ const bgRectangleField = StateField.define({
           //     value.spec.class === bgRectangleClassName;
           //   return !shouldRemove;
           // },
-          filter: (f, t, value) =>
-          !(value.class === bgRectangleClassName),
+          filter: (f, t, value) => !(value.class === bgRectangleClassName),
         });
       }
     }
@@ -247,8 +246,8 @@ let loadSource;
 //const fsPath = './shaders/sound/soundDev.js';
 const fsPath =
   `${location.protocol}` === 'file:'
-  ? './shaders/sound/soundDev.js'
-  : './shaders/sound/soundMain.js';
+    ? './shaders/sound/soundDev.js'
+    : './shaders/sound/soundMain.js';
 loadSource = await fetchShader(fsPath);
 
 const fontSizeTheme = EditorView.theme({
