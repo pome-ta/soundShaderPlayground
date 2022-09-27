@@ -6,7 +6,6 @@ import ui
 sys.path.append(str(pathlib.Path.cwd()) + '/pythonista-webview')
 from wkwebview import WKWebView
 
-
 class View(ui.View):
   def __init__(self, url, *args, **kwargs):
     ui.View.__init__(self, *args, **kwargs)
@@ -18,7 +17,11 @@ class View(ui.View):
     self.set_reload_btn()
 
   def will_close(self):
-    self.refresh_webview()
+    #self.wv.eval_js_async('window', lambda v: out(v))
+    #self.wv.eval_js_async('add(1, 2);', lambda v: out(v))
+    js_code = 'location.protocol'
+    self.wv.eval_js_async(js_code, lambda v: out(v))
+    #self.refresh_webview()
 
   def set_reload_btn(self):
     self.close_btn = self.create_btn('iob:ios7_refresh_outline_32')
@@ -33,6 +36,8 @@ class View(ui.View):
     self.wv.clear_cache()
     self.wv.reload()
 
+def out(value):
+  print(f'outttt: {value}')
 
 if __name__ == '__main__':
   #sys.path.append(str(pathlib.Path.cwd()) + '/pystaObjcPrint')
@@ -40,4 +45,5 @@ if __name__ == '__main__':
   uri_path = pathlib.Path('./docs/index.html')
   view = View(uri_path)
   view.present(style='fullscreen', orientations=['portrait'])
+  #view.present(style='panel', orientations=['portrait'])
 
