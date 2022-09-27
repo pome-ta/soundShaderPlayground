@@ -282,7 +282,7 @@ const extensions = [
   ...initExtensions,
   whitespaceShow,
   resOutlineTheme,
-  //bgRectangleTheme,
+  bgRectangleTheme,
   //whitespaceShow,
   updateCallback,
   keymap.of([...myKeyMpas]),
@@ -354,3 +354,9 @@ window.addEventListener('beforeunload', (event) => {
   event.returnValue = '';
   console.log('c')
 });*/
+
+/*
+function add(a, b) {
+  return a + b;
+}
+*/

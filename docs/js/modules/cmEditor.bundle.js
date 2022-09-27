@@ -27,10 +27,10 @@ class Text {
     */
     replace(from, to, text) {
         let parts = [];
-        this.decompose(0, from, parts, 2 /* To */);
+        this.decompose(0, from, parts, 2 /* Open.To */);
         if (text.length)
-            text.decompose(0, text.length, parts, 1 /* From */ | 2 /* To */);
-        this.decompose(to, this.length, parts, 1 /* From */);
+            text.decompose(0, text.length, parts, 1 /* Open.From */ | 2 /* Open.To */);
+        this.decompose(to, this.length, parts, 1 /* Open.From */);
         return TextNode.from(parts, this.length - (to - from) + text.length);
     }
     /**
@@ -120,7 +120,7 @@ class Text {
             throw new RangeError("A document must have at least one line");
         if (text.length == 1 && !text[0])
             return Text.empty;
-        return text.length <= 32 /* Branch */ ? new TextLeaf(text) : TextNode.from(TextLeaf.split(text, []));
+        return text.length <= 32 /* Tree.Branch */ ? new TextLeaf(text) : TextNode.from(TextLeaf.split(text, []));
     }
 }
 // Leaves store an array of line strings. There are always line breaks
@@ -146,10 +146,10 @@ class TextLeaf extends Text {
     decompose(from, to, target, open) {
         let text = from <= 0 && to >= this.length ? this
             : new TextLeaf(sliceText(this.text, from, to), Math.min(to, this.length) - Math.max(0, from));
-        if (open & 1 /* From */) {
+        if (open & 1 /* Open.From */) {
             let prev = target.pop();
             let joined = appendText(text.text, prev.text.slice(), 0, text.length);
-            if (joined.length <= 32 /* Branch */) {
+            if (joined.length <= 32 /* Tree.Branch */) {
                 target.push(new TextLeaf(joined, prev.length + text.length));
             }
             else {
@@ -166,7 +166,7 @@ class TextLeaf extends Text {
             return super.replace(from, to, text);
         let lines = appendText(this.text, appendText(text.text, sliceText(this.text, 0, from)), to);
         let newLen = this.length + text.length - (to - from);
-        if (lines.length <= 32 /* Branch */)
+        if (lines.length <= 32 /* Tree.Branch */)
             return new TextLeaf(lines, newLen);
         return TextNode.from(TextLeaf.split(lines, []), newLen);
     }
@@ -192,7 +192,7 @@ class TextLeaf extends Text {
         for (let line of text) {
             part.push(line);
             len += line.length + 1;
-            if (part.length == 32 /* Branch */) {
+            if (part.length == 32 /* Tree.Branch */) {
                 target.push(new TextLeaf(part, len));
                 part = [];
                 len = -1;
@@ -229,7 +229,7 @@ class TextNode extends Text {
         for (let i = 0, pos = 0; pos <= to && i < this.children.length; i++) {
             let child = this.children[i], end = pos + child.length;
             if (from <= end && to >= pos) {
-                let childOpen = open & ((pos <= from ? 1 /* From */ : 0) | (end >= to ? 2 /* To */ : 0));
+                let childOpen = open & ((pos <= from ? 1 /* Open.From */ : 0) | (end >= to ? 2 /* Open.To */ : 0));
                 if (pos >= from && end <= to && !childOpen)
                     target.push(child);
                 else
@@ -248,8 +248,8 @@ class TextNode extends Text {
                 if (from >= pos && to <= end) {
                     let updated = child.replace(from - pos, to - pos, text);
                     let totalLines = this.lines - child.lines + updated.lines;
-                    if (updated.lines < (totalLines >> (5 /* BranchShift */ - 1)) &&
-                        updated.lines > (totalLines >> (5 /* BranchShift */ + 1))) {
+                    if (updated.lines < (totalLines >> (5 /* Tree.BranchShift */ - 1)) &&
+                        updated.lines > (totalLines >> (5 /* Tree.BranchShift */ + 1))) {
                         let copy = this.children.slice();
                         copy[i] = updated;
                         return new TextNode(copy, this.length - (to - from) + text.length);
@@ -295,13 +295,13 @@ class TextNode extends Text {
         let lines = 0;
         for (let ch of children)
             lines += ch.lines;
-        if (lines < 32 /* Branch */) {
+        if (lines < 32 /* Tree.Branch */) {
             let flat = [];
             for (let ch of children)
                 ch.flatten(flat);
             return new TextLeaf(flat, length);
         }
-        let chunk = Math.max(32 /* Branch */, lines >> 5 /* BranchShift */), maxChunk = chunk << 1, minChunk = chunk >> 1;
+        let chunk = Math.max(32 /* Tree.Branch */, lines >> 5 /* Tree.BranchShift */), maxChunk = chunk << 1, minChunk = chunk >> 1;
         let chunked = [], currentLines = 0, currentLen = -1, currentChunk = [];
         function add(child) {
             let last;
@@ -315,7 +315,7 @@ class TextNode extends Text {
             }
             else if (child instanceof TextLeaf && currentLines &&
                 (last = currentChunk[currentChunk.length - 1]) instanceof TextLeaf &&
-                child.lines + last.lines <= 32 /* Branch */) {
+                child.lines + last.lines <= 32 /* Tree.Branch */) {
                 currentLines += child.lines;
                 currentLen += child.length + 1;
                 currentChunk[currentChunk.length - 1] = new TextLeaf(last.text.concat(child.text), last.length + 1 + child.length);
@@ -1311,12 +1311,12 @@ class SelectionRange {
     The anchor of the range—the side that doesn't move when you
     extend it.
     */
-    get anchor() { return this.flags & 16 /* Inverted */ ? this.to : this.from; }
+    get anchor() { return this.flags & 16 /* RangeFlag.Inverted */ ? this.to : this.from; }
     /**
     The head of the range, which is moved when the range is
     [extended](https://codemirror.net/6/docs/ref/#state.SelectionRange.extend).
     */
-    get head() { return this.flags & 16 /* Inverted */ ? this.from : this.to; }
+    get head() { return this.flags & 16 /* RangeFlag.Inverted */ ? this.from : this.to; }
     /**
     True when `anchor` and `head` are at the same position.
     */
@@ -1327,13 +1327,13 @@ class SelectionRange {
     the character before its position, 1 the character after, and 0
     means no association.
     */
-    get assoc() { return this.flags & 4 /* AssocBefore */ ? -1 : this.flags & 8 /* AssocAfter */ ? 1 : 0; }
+    get assoc() { return this.flags & 4 /* RangeFlag.AssocBefore */ ? -1 : this.flags & 8 /* RangeFlag.AssocAfter */ ? 1 : 0; }
     /**
     The bidirectional text level associated with this cursor, if
     any.
     */
     get bidiLevel() {
-        let level = this.flags & 3 /* BidiLevelMask */;
+        let level = this.flags & 3 /* RangeFlag.BidiLevelMask */;
         return level == 3 ? null : level;
     }
     /**
@@ -1343,8 +1343,8 @@ class SelectionRange {
     lines of different length.
     */
     get goalColumn() {
-        let value = this.flags >> 5 /* GoalColumnOffset */;
-        return value == 33554431 /* NoGoalColumn */ ? undefined : value;
+        let value = this.flags >> 5 /* RangeFlag.GoalColumnOffset */;
+        return value == 33554431 /* RangeFlag.NoGoalColumn */ ? undefined : value;
     }
     /**
     Map this range through a change, producing a valid range in the
@@ -1504,17 +1504,17 @@ class EditorSelection {
     safely ignore the optional arguments in most situations.
     */
     static cursor(pos, assoc = 0, bidiLevel, goalColumn) {
-        return SelectionRange.create(pos, pos, (assoc == 0 ? 0 : assoc < 0 ? 4 /* AssocBefore */ : 8 /* AssocAfter */) |
+        return SelectionRange.create(pos, pos, (assoc == 0 ? 0 : assoc < 0 ? 4 /* RangeFlag.AssocBefore */ : 8 /* RangeFlag.AssocAfter */) |
             (bidiLevel == null ? 3 : Math.min(2, bidiLevel)) |
-            ((goalColumn !== null && goalColumn !== void 0 ? goalColumn : 33554431 /* NoGoalColumn */) << 5 /* GoalColumnOffset */));
+            ((goalColumn !== null && goalColumn !== void 0 ? goalColumn : 33554431 /* RangeFlag.NoGoalColumn */) << 5 /* RangeFlag.GoalColumnOffset */));
     }
     /**
     Create a selection range.
     */
     static range(anchor, head, goalColumn) {
-        let goal = (goalColumn !== null && goalColumn !== void 0 ? goalColumn : 33554431 /* NoGoalColumn */) << 5 /* GoalColumnOffset */;
-        return head < anchor ? SelectionRange.create(head, anchor, 16 /* Inverted */ | goal | 8 /* AssocAfter */)
-            : SelectionRange.create(anchor, head, goal | (head > anchor ? 4 /* AssocBefore */ : 0));
+        let goal = (goalColumn !== null && goalColumn !== void 0 ? goalColumn : 33554431 /* RangeFlag.NoGoalColumn */) << 5 /* RangeFlag.GoalColumnOffset */;
+        return head < anchor ? SelectionRange.create(head, anchor, 16 /* RangeFlag.Inverted */ | goal | 8 /* RangeFlag.AssocAfter */)
+            : SelectionRange.create(anchor, head, goal | (head > anchor ? 4 /* RangeFlag.AssocBefore */ : 0));
     }
     /**
     @internal
@@ -1587,7 +1587,7 @@ class Facet {
     Returns an extension that adds the given value to this facet.
     */
     of(value) {
-        return new FacetProvider([], this, 0 /* Static */, value);
+        return new FacetProvider([], this, 0 /* Provider.Static */, value);
     }
     /**
     Create an extension that computes a value for the facet from a
@@ -1601,7 +1601,7 @@ class Facet {
     compute(deps, get) {
         if (this.isStatic)
             throw new Error("Can't compute a static facet");
-        return new FacetProvider(deps, this, 1 /* Single */, get);
+        return new FacetProvider(deps, this, 1 /* Provider.Single */, get);
     }
     /**
     Create an extension that computes zero or more values for this
@@ -1610,7 +1610,7 @@ class Facet {
     computeN(deps, get) {
         if (this.isStatic)
             throw new Error("Can't compute a static facet");
-        return new FacetProvider(deps, this, 2 /* Multi */, get);
+        return new FacetProvider(deps, this, 2 /* Provider.Multi */, get);
     }
     from(field, get) {
         if (!get)
@@ -1633,7 +1633,7 @@ class FacetProvider {
         var _a;
         let getter = this.value;
         let compare = this.facet.compareInput;
-        let id = this.id, idx = addresses[id] >> 1, multi = this.type == 2 /* Multi */;
+        let id = this.id, idx = addresses[id] >> 1, multi = this.type == 2 /* Provider.Multi */;
         let depDoc = false, depSel = false, depAddrs = [];
         for (let dep of this.dependencies) {
             if (dep == "doc")
@@ -1646,14 +1646,14 @@ class FacetProvider {
         return {
             create(state) {
                 state.values[idx] = getter(state);
-                return 1 /* Changed */;
+                return 1 /* SlotStatus.Changed */;
             },
             update(state, tr) {
                 if ((depDoc && tr.docChanged) || (depSel && (tr.docChanged || tr.selection)) || ensureAll(state, depAddrs)) {
                     let newVal = getter(state);
                     if (multi ? !compareArray(newVal, state.values[idx], compare) : !compare(newVal, state.values[idx])) {
                         state.values[idx] = newVal;
-                        return 1 /* Changed */;
+                        return 1 /* SlotStatus.Changed */;
                     }
                 }
                 return 0;
@@ -1672,7 +1672,7 @@ class FacetProvider {
                     }
                 }
                 state.values[idx] = newVal;
-                return 1 /* Changed */;
+                return 1 /* SlotStatus.Changed */;
             }
         };
     }
@@ -1688,7 +1688,7 @@ function compareArray(a, b, compare) {
 function ensureAll(state, addrs) {
     let changed = false;
     for (let addr of addrs)
-        if (ensureAddr(state, addr) & 1 /* Changed */)
+        if (ensureAddr(state, addr) & 1 /* SlotStatus.Changed */)
             changed = true;
     return changed;
 }
@@ -1701,7 +1701,7 @@ function dynamicFacetSlot(addresses, facet, providers) {
         let values = [];
         for (let i = 0; i < providerAddrs.length; i++) {
             let value = getAddr(state, providerAddrs[i]);
-            if (providerTypes[i] == 2 /* Multi */)
+            if (providerTypes[i] == 2 /* Provider.Multi */)
                 for (let val of value)
                     values.push(val);
             else
@@ -1714,7 +1714,7 @@ function dynamicFacetSlot(addresses, facet, providers) {
             for (let addr of providerAddrs)
                 ensureAddr(state, addr);
             state.values[idx] = get(state);
-            return 1 /* Changed */;
+            return 1 /* SlotStatus.Changed */;
         },
         update(state, tr) {
             if (!ensureAll(state, dynamic))
@@ -1723,7 +1723,7 @@ function dynamicFacetSlot(addresses, facet, providers) {
             if (facet.compare(value, state.values[idx]))
                 return 0;
             state.values[idx] = value;
-            return 1 /* Changed */;
+            return 1 /* SlotStatus.Changed */;
         },
         reconfigure(state, oldState) {
             let depChanged = ensureAll(state, providerAddrs);
@@ -1738,7 +1738,7 @@ function dynamicFacetSlot(addresses, facet, providers) {
                 return 0;
             }
             state.values[idx] = value;
-            return 1 /* Changed */;
+            return 1 /* SlotStatus.Changed */;
         }
     };
 }
@@ -1788,7 +1788,7 @@ class StateField {
         return {
             create: (state) => {
                 state.values[idx] = this.create(state);
-                return 1 /* Changed */;
+                return 1 /* SlotStatus.Changed */;
             },
             update: (state, tr) => {
                 let oldVal = state.values[idx];
@@ -1796,7 +1796,7 @@ class StateField {
                 if (this.compareF(oldVal, value))
                     return 0;
                 state.values[idx] = value;
-                return 1 /* Changed */;
+                return 1 /* SlotStatus.Changed */;
             },
             reconfigure: (state, oldState) => {
                 if (oldState.config.address[this.id] != null) {
@@ -1804,7 +1804,7 @@ class StateField {
                     return 0;
                 }
                 state.values[idx] = this.create(state);
-                return 1 /* Changed */;
+                return 1 /* SlotStatus.Changed */;
             }
         };
     }
@@ -1913,7 +1913,7 @@ class Configuration {
         this.facets = facets;
         this.statusTemplate = [];
         while (this.statusTemplate.length < dynamicSlots.length)
-            this.statusTemplate.push(0 /* Unresolved */);
+            this.statusTemplate.push(0 /* SlotStatus.Unresolved */);
     }
     staticFacet(facet) {
         let addr = this.address[facet.id];
@@ -1940,7 +1940,7 @@ class Configuration {
         for (let id in facets) {
             let providers = facets[id], facet = providers[0].facet;
             let oldProviders = oldFacets && oldFacets[id] || [];
-            if (providers.every(p => p.type == 0 /* Static */)) {
+            if (providers.every(p => p.type == 0 /* Provider.Static */)) {
                 address[facet.id] = (staticValues.length << 1) | 1;
                 if (sameArray$1(oldProviders, providers)) {
                     staticValues.push(oldState.facet(facet));
@@ -1952,7 +1952,7 @@ class Configuration {
             }
             else {
                 for (let p of providers) {
-                    if (p.type == 0 /* Static */) {
+                    if (p.type == 0 /* Provider.Static */) {
                         address[p.id] = (staticValues.length << 1) | 1;
                         staticValues.push(p.value);
                     }
@@ -2020,16 +2020,16 @@ function flatten(extension, compartments, newCompartments) {
 }
 function ensureAddr(state, addr) {
     if (addr & 1)
-        return 2 /* Computed */;
+        return 2 /* SlotStatus.Computed */;
     let idx = addr >> 1;
     let status = state.status[idx];
-    if (status == 4 /* Computing */)
+    if (status == 4 /* SlotStatus.Computing */)
         throw new Error("Cyclic dependency between fields and/or facets");
-    if (status & 2 /* Computed */)
+    if (status & 2 /* SlotStatus.Computed */)
         return status;
-    state.status[idx] = 4 /* Computing */;
+    state.status[idx] = 4 /* SlotStatus.Computing */;
     let changed = state.computeSlot(state, state.config.dynamicSlots[idx]);
-    return state.status[idx] = 2 /* Computed */ | changed;
+    return state.status[idx] = 2 /* SlotStatus.Computed */ | changed;
 }
 function getAddr(state, addr) {
     return addr & 1 ? state.config.staticValues[addr >> 1] : state.values[addr >> 1];
@@ -2466,7 +2466,7 @@ function extendTransaction(tr) {
     for (let i = extenders.length - 1; i >= 0; i--) {
         let extension = extenders[i](tr);
         if (extension && Object.keys(extension).length)
-            spec = mergeTransaction(tr, resolveTransactionInner(state, extension, tr.changes.newLength), true);
+            spec = mergeTransaction(spec, resolveTransactionInner(state, extension, tr.changes.newLength), true);
     }
     return spec == tr ? tr : Transaction.create(state, tr.changes, tr.selection, spec.effects, spec.annotations, spec.scrollIntoView);
 }
@@ -3075,7 +3075,7 @@ class Chunk {
         }
     }
     between(offset, from, to, f) {
-        for (let i = this.findIndex(from, -1000000000 /* Far */, true), e = this.findIndex(to, 1000000000 /* Far */, false, i); i < e; i++)
+        for (let i = this.findIndex(from, -1000000000 /* C.Far */, true), e = this.findIndex(to, 1000000000 /* C.Far */, false, i); i < e; i++)
             if (f(this.from[i] + offset, this.to[i] + offset, this.value[i]) === false)
                 return false;
     }
@@ -3308,7 +3308,7 @@ class RangeSet {
     */
     static eq(oldSets, newSets, from = 0, to) {
         if (to == null)
-            to = 1000000000 /* Far */;
+            to = 1000000000 /* C.Far */;
         let a = oldSets.filter(set => !set.isEmpty && newSets.indexOf(set) < 0);
         let b = newSets.filter(set => !set.isEmpty && oldSets.indexOf(set) < 0);
         if (a.length != b.length)
@@ -3403,8 +3403,8 @@ class RangeSetBuilder {
         this.chunkPos = [];
         this.chunkStart = -1;
         this.last = null;
-        this.lastFrom = -1000000000 /* Far */;
-        this.lastTo = -1000000000 /* Far */;
+        this.lastFrom = -1000000000 /* C.Far */;
+        this.lastTo = -1000000000 /* C.Far */;
         this.from = [];
         this.to = [];
         this.value = [];
@@ -3441,7 +3441,7 @@ class RangeSetBuilder {
             throw new Error("Ranges must be added sorted by `from` position and `startSide`");
         if (diff < 0)
             return false;
-        if (this.from.length == 250 /* ChunkSize */)
+        if (this.from.length == 250 /* C.ChunkSize */)
             this.finishChunk(true);
         if (this.chunkStart < 0)
             this.chunkStart = from;
@@ -3515,7 +3515,7 @@ class LayerCursor {
     }
     get startSide() { return this.value ? this.value.startSide : 0; }
     get endSide() { return this.value ? this.value.endSide : 0; }
-    goto(pos, side = -1000000000 /* Far */) {
+    goto(pos, side = -1000000000 /* C.Far */) {
         this.chunkIndex = this.rangeIndex = 0;
         this.gotoInner(pos, side, false);
         return this;
@@ -3544,7 +3544,7 @@ class LayerCursor {
     next() {
         for (;;) {
             if (this.chunkIndex == this.layer.chunk.length) {
-                this.from = this.to = 1000000000 /* Far */;
+                this.from = this.to = 1000000000 /* C.Far */;
                 this.value = null;
                 break;
             }
@@ -3598,7 +3598,7 @@ class HeapCursor {
         return heap.length == 1 ? heap[0] : new HeapCursor(heap);
     }
     get startSide() { return this.value ? this.value.startSide : 0; }
-    goto(pos, side = -1000000000 /* Far */) {
+    goto(pos, side = -1000000000 /* C.Far */) {
         for (let cur of this.heap)
             cur.goto(pos, side);
         for (let i = this.heap.length >> 1; i >= 0; i--)
@@ -3616,7 +3616,7 @@ class HeapCursor {
     }
     next() {
         if (this.heap.length == 0) {
-            this.from = this.to = 1000000000 /* Far */;
+            this.from = this.to = 1000000000 /* C.Far */;
             this.value = null;
             this.rank = -1;
         }
@@ -3660,12 +3660,12 @@ class SpanCursor {
         this.point = null;
         this.pointFrom = 0;
         this.pointRank = 0;
-        this.to = -1000000000 /* Far */;
+        this.to = -1000000000 /* C.Far */;
         this.endSide = 0;
         this.openStart = -1;
         this.cursor = HeapCursor.from(sets, skip, minPoint);
     }
-    goto(pos, side = -1000000000 /* Far */) {
+    goto(pos, side = -1000000000 /* C.Far */) {
         this.cursor.goto(pos, side);
         this.active.length = this.activeTo.length = this.activeRank.length = 0;
         this.minActive = -1;
@@ -3716,7 +3716,7 @@ class SpanCursor {
                     remove(trackOpen, a);
             }
             else if (!this.cursor.value) {
-                this.to = this.endSide = 1000000000 /* Far */;
+                this.to = this.endSide = 1000000000 /* C.Far */;
                 break;
             }
             else if (this.cursor.from > from) {
@@ -3821,7 +3821,7 @@ function insert(array, index, value) {
     array[index] = value;
 }
 function findMinIndex(value, array) {
-    let found = -1, foundPos = 1000000000 /* Far */;
+    let found = -1, foundPos = 1000000000 /* C.Far */;
     for (let i = 0; i < array.length; i++)
         if ((array[i] - foundPos || value[i].endSide - value[found].endSide) < 0) {
             found = i;
@@ -4241,7 +4241,7 @@ function windowRect(win) {
         top: 0, bottom: win.innerHeight };
 }
 function scrollRectIntoView(dom, rect, side, x, y, xMargin, yMargin, ltr) {
-    let doc = dom.ownerDocument, win = doc.defaultView;
+    let doc = dom.ownerDocument, win = doc.defaultView || window;
     for (let cur = dom; cur;) {
         if (cur.nodeType == 1) { // Element
             let bounding, top = cur == doc.body;
@@ -4491,7 +4491,7 @@ class ContentView {
                 if (child.dirty) {
                     if (!child.dom && (next = prev ? prev.nextSibling : parent.firstChild)) {
                         let contentView = ContentView.get(next);
-                        if (!contentView || !contentView.parent && contentView.constructor == child.constructor)
+                        if (!contentView || !contentView.parent && contentView.canReuseDOM(child))
                             child.reuseDOM(next);
                     }
                     child.sync(track);
@@ -4649,6 +4649,7 @@ class ContentView {
         return false;
     }
     become(other) { return false; }
+    canReuseDOM(other) { return other.constructor == this.constructor; }
     // When this is a zero-length view with a side, this should return a
     // number <= 0 to indicate it is before its position, or a
     // number > 0 when after its position.
@@ -5052,6 +5053,7 @@ class CompositionView extends WidgetView {
         (_a = this.widget.topView) === null || _a === void 0 ? void 0 : _a.destroy();
     }
     get isEditable() { return true; }
+    canReuseDOM() { return true; }
 }
 // Uses the old structure of a chunk of content view frozen for
 // composition to try and find a reasonable DOM location for the given
@@ -6778,7 +6780,13 @@ class DocView extends ContentView {
                     // (one where the focus is before the anchor), but not all
                     // browsers support it yet.
                     rawSel.collapse(anchor.node, anchor.offset);
-                    rawSel.extend(head.node, head.offset);
+                    // Safari will ignore the call above when the editor is
+                    // hidden, and then raise an error on the call to extend
+                    // (#940).
+                    try {
+                        rawSel.extend(head.node, head.offset);
+                    }
+                    catch (_) { }
                 }
                 else {
                     // Primitive (IE) way
@@ -7831,7 +7839,7 @@ handlers.touchmove = view => {
 handlerOptions.touchstart = handlerOptions.touchmove = { passive: true };
 handlers.mousedown = (view, event) => {
     view.observer.flush();
-    if (view.inputState.lastTouchTime > Date.now() - 2000 && getClickType(event) == 1)
+    if (view.inputState.lastTouchTime > Date.now() - 2000)
         return; // Ignore touch interaction
     let style = null;
     for (let makeStyle of view.state.facet(mouseSelectionStyle)) {
@@ -8801,7 +8809,7 @@ class DecorationComparator {
 
 function visiblePixelRange(dom, paddingTop) {
     let rect = dom.getBoundingClientRect();
-    let doc = dom.ownerDocument, win = doc.defaultView;
+    let doc = dom.ownerDocument, win = doc.defaultView || window;
     let left = Math.max(0, rect.left), right = Math.min(win.innerWidth, rect.right);
     let top = Math.max(0, rect.top), bottom = Math.min(win.innerHeight, rect.bottom);
     for (let parent = dom.parentNode; parent && parent != doc.body;) {
@@ -10876,7 +10884,7 @@ class EditorView {
     setRoot(root) {
         if (this._root != root) {
             this._root = root;
-            this.observer.setWindow((root.nodeType == 9 ? root : root.ownerDocument).defaultView);
+            this.observer.setWindow((root.nodeType == 9 ? root : root.ownerDocument).defaultView || window);
             this.mountStyles();
         }
     }
@@ -13833,6 +13841,7 @@ class Rule {
     }
     get depth() { return this.context ? this.context.length : 0; }
 }
+Rule.empty = new Rule([], 2 /* Normal */, null);
 /// Define a [highlighter](#highlight.Highlighter) from an array of
 /// tag/class pairs. Classes associated with more specific tags will
 /// take precedence.
@@ -13860,7 +13869,7 @@ function tagHighlighter(tags, options) {
             }
             return cls;
         },
-        scope: scope
+        scope
     };
 }
 function highlightTags(highlighters, tags) {
@@ -13913,25 +13922,17 @@ class HighlightBuilder {
         if (type.isTop)
             highlighters = this.highlighters.filter(h => !h.scope || h.scope(type));
         let cls = inheritedClass;
-        let rule = type.prop(ruleNodeProp), opaque = false;
-        while (rule) {
-            if (!rule.context || cursor.matchContext(rule.context)) {
-                let tagCls = highlightTags(highlighters, rule.tags);
-                if (tagCls) {
-                    if (cls)
-                        cls += " ";
-                    cls += tagCls;
-                    if (rule.mode == 1 /* Inherit */)
-                        inheritedClass += (inheritedClass ? " " : "") + tagCls;
-                    else if (rule.mode == 0 /* Opaque */)
-                        opaque = true;
-                }
-                break;
-            }
-            rule = rule.next;
+        let rule = getStyleTags(cursor) || Rule.empty;
+        let tagCls = highlightTags(highlighters, rule.tags);
+        if (tagCls) {
+            if (cls)
+                cls += " ";
+            cls += tagCls;
+            if (rule.mode == 1 /* Inherit */)
+                inheritedClass += (inheritedClass ? " " : "") + tagCls;
         }
         this.startSpan(cursor.from, cls);
-        if (opaque)
+        if (rule.opaque)
             return;
         let mounted = cursor.tree && cursor.tree.prop(NodeProp.mounted);
         if (mounted && mounted.overlay) {
@@ -13973,6 +13974,15 @@ class HighlightBuilder {
             cursor.parent();
         }
     }
+}
+/// Match a syntax node's [highlight rules](#highlight.styleTags). If
+/// there's a match, return its set of tags, and whether it is
+/// opaque (uses a `!`) or applies to all child nodes (`/...`).
+function getStyleTags(node) {
+    let rule = node.type.prop(ruleNodeProp);
+    while (rule && rule.context && !node.matchContext(rule.context))
+        rule = rule.next;
+    return rule || null;
 }
 const t = Tag.define;
 const comment = t(), name = t(), typeName = t(name), propertyName = t(name), literal = t(), string = t(literal), number = t(literal), content = t(), heading = t(content), keyword = t(), operator = t(), punctuation = t(), bracket = t(punctuation), meta = t();
@@ -16925,7 +16935,8 @@ const defaultKeymap = /*@__PURE__*/[
 
 const defaults = {
     brackets: ["(", "[", "{", "'", '"'],
-    before: ")]}:;>"
+    before: ")]}:;>",
+    stringPrefixes: []
 };
 const closeBracketEffect = /*@__PURE__*/StateEffect.define({
     map(value, mapping) {
@@ -17010,7 +17021,7 @@ function insertBracket(state, bracket) {
     for (let tok of tokens) {
         let closed = closing(codePointAt(tok, 0));
         if (bracket == tok)
-            return closed == tok ? handleSame(state, tok, tokens.indexOf(tok + tok + tok) > -1)
+            return closed == tok ? handleSame(state, tok, tokens.indexOf(tok + tok + tok) > -1, conf)
                 : handleOpen(state, tok, closed, conf.before || defaults.before);
         if (bracket == closed && closedBracketAt(state, state.selection.main.from))
             return handleClose(state, tok, closed);
@@ -17061,13 +17072,14 @@ function handleClose(state, _open, close) {
 }
 // Handles cases where the open and close token are the same, and
 // possibly triple quotes (as in `"""abc"""`-style quoting).
-function handleSame(state, token, allowTriple) {
+function handleSame(state, token, allowTriple, config) {
+    let stringPrefixes = config.stringPrefixes || defaults.stringPrefixes;
     let dont = null, changes = state.changeByRange(range => {
         if (!range.empty)
             return { changes: [{ insert: token, from: range.from }, { insert: token, from: range.to }],
                 effects: closeBracketEffect.of(range.to + token.length),
                 range: EditorSelection.range(range.anchor + token.length, range.head + token.length) };
-        let pos = range.head, next = nextChar(state.doc, pos);
+        let pos = range.head, next = nextChar(state.doc, pos), start;
         if (next == token) {
             if (nodeStart(state, pos)) {
                 return { changes: { insert: token + token, from: pos },
@@ -17081,14 +17093,14 @@ function handleSame(state, token, allowTriple) {
             }
         }
         else if (allowTriple && state.sliceDoc(pos - 2 * token.length, pos) == token + token &&
-            nodeStart(state, pos - 2 * token.length)) {
+            (start = canStartStringAt(state, pos - 2 * token.length, stringPrefixes)) > -1 &&
+            nodeStart(state, start)) {
             return { changes: { insert: token + token + token + token, from: pos },
                 effects: closeBracketEffect.of(pos + token.length),
                 range: EditorSelection.cursor(pos + token.length) };
         }
         else if (state.charCategorizer(pos)(next) != CharCategory.Word) {
-            let prev = state.sliceDoc(pos - 1, pos);
-            if (prev != token && state.charCategorizer(pos)(prev) != CharCategory.Word && !probablyInString(state, pos, token))
+            if (canStartStringAt(state, pos, stringPrefixes) > -1 && !probablyInString(state, pos, token, stringPrefixes))
                 return { changes: { insert: token + token, from: pos },
                     effects: closeBracketEffect.of(pos + token.length),
                     range: EditorSelection.cursor(pos + token.length) };
@@ -17104,12 +17116,15 @@ function nodeStart(state, pos) {
     let tree = syntaxTree(state).resolveInner(pos + 1);
     return tree.parent && tree.from == pos;
 }
-function probablyInString(state, pos, quoteToken) {
+function probablyInString(state, pos, quoteToken, prefixes) {
     let node = syntaxTree(state).resolveInner(pos, -1);
+    let maxPrefix = prefixes.reduce((m, p) => Math.max(m, p.length), 0);
     for (let i = 0; i < 5; i++) {
-        if (state.sliceDoc(node.from, node.from + quoteToken.length) == quoteToken) {
+        let start = state.sliceDoc(node.from, Math.min(node.to, node.from + quoteToken.length + maxPrefix));
+        let quotePos = start.indexOf(quoteToken);
+        if (!quotePos || quotePos > -1 && prefixes.indexOf(start.slice(0, quotePos)) > -1) {
             let first = node.firstChild;
-            while (first && first.from == node.from && first.to - first.from > quoteToken.length) {
+            while (first && first.from == node.from && first.to - first.from > quoteToken.length + quotePos) {
                 if (state.sliceDoc(first.to - quoteToken.length, first.to) == quoteToken)
                     return false;
                 first = first.firstChild;
@@ -17122,6 +17137,17 @@ function probablyInString(state, pos, quoteToken) {
         node = parent;
     }
     return false;
+}
+function canStartStringAt(state, pos, prefixes) {
+    let charCat = state.charCategorizer(pos);
+    if (charCat(state.sliceDoc(pos - 1, pos)) != CharCategory.Word)
+        return pos;
+    for (let prefix of prefixes) {
+        let start = pos - prefix.length;
+        if (state.sliceDoc(start, pos) == prefix && charCat(state.sliceDoc(start - 1, start)) != CharCategory.Word)
+            return start;
+    }
+    return -1;
 }
 
 /**
@@ -18935,7 +18961,7 @@ const chalky = '#e5c07b',
   // highlightBackground = '#21252b80', // 元は、`darkBackground` の色
   highlightBackground = '#282c34', // 元は、`darkBackground` の色
   // background = '#282c34',
-  background = '#282c3460',
+  background = '#282c3440',
   tooltipBackground = '#353a42',
   selection = '#3E445180',
   cursor = '#528bff';
