@@ -339,6 +339,18 @@ if (hasTouchScreen()) {
   reIndentButton.addEventListener(eventName, initAudioContext);
 }
 
+
+//console.log(document.querySelector('#editor-div'))
+//console.log(window)
+
+const outlogEle = document.createElement('div');
+outlogEle.id = 'outlog'
+outlogEle.textContent = 'hoge'
+
+//console.log(window.webkit)
+console.log(outlogEle)
+
+
 /*
 document.addEventListener('close', ()=> {
   console.log('c')
