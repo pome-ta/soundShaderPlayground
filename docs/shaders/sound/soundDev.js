@@ -1,4 +1,4 @@
-// memo: 
+// memo: ほげふかみ
 #define BPM 90.0
 
 const float PI = acos(-1.0);
@@ -33,9 +33,8 @@ vec2 mainSound(float time){
   float bpm = timeToBeat(time);
   // float k = kick(fract(bpm));
   float k = kick(time);
-  float seq = k * fract(-1.0 * time);
+  float seq = k * fract(-1.0 * bpm);
 
   return vec2(seq);
   //return vec2(0.0);
 }
-
