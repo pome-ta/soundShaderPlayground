@@ -348,7 +348,7 @@ outlogEle.id = 'outlog'
 outlogEle.textContent = 'hoge'
 
 //console.log(window.webkit)
-console.log(outlogEle)
+//console.log(outlogEle)
 
 
 /*

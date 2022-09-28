@@ -3,11 +3,18 @@ import pathlib
 
 sys.path.append(str(pathlib.Path.cwd()) + '/pythonista-webview')
 from wkwebview import WKWebView
-from objc_util import create_objc_class
+from objc_util import create_objc_class, ObjCInstance
 import ui
+
 
 def webView_didFinishNavigation_(_self, _cmd, _webview, _navigation):
   print('読み込み')
+  webview = ObjCInstance(_webview)
+  this = ObjCInstance(_self)
+  js_code = 'document.querySelector("#mode-select")'
+  #out = this.eval_js(js_code)
+  print(this)
+  
 
 myWKNavigationDelegate = create_objc_class(
   'myWKNavigationDelegate',
@@ -15,14 +22,17 @@ myWKNavigationDelegate = create_objc_class(
   protocols=['WKNavigationDelegate']
 )
 
+js_func = '''function add(a, b) {
+  return a + b;
+}
+'''
 
 class View(ui.View):
   def __init__(self, url, *args, **kwargs):
     ui.View.__init__(self, *args, **kwargs)
     self.wv = WKWebView()
-    #self.wv.delegate = myWKNavigationDelegate.new()
-    #pdbg.state(self.wv.webview)
-    self.wv.webview.setNavigationDelegate_(myWKNavigationDelegate.new())
+    self.wv.add_script(js_func)
+    #self.wv.webview.setNavigationDelegate_(myWKNavigationDelegate.new())
     self.wv.load_url(str(url))
     self.wv.flex = 'WH'
     #self.present(style='fullscreen', orientations=['portrait'])
@@ -35,10 +45,11 @@ class View(ui.View):
     #self.wv.eval_js_async('add(1, 2);', lambda v: out(v))
     #js_code = 'document.querySelector("#outlog").textContent'
     #js_code = 'document'
-    #js_code = 'document.querySelector("#mode-select").value'
+    #js_code = 'document.querySelector("#mode-select")'
     #js_code = 'console.log("#mode-select")'
-    js_code = 'window.webkit'
-    #self.wv.eval_js_async(js_code, lambda v: out(v))
+    #js_code = 'window.webkit'
+    js_code = 'add(1, 2)'
+    self.wv.eval_js_async(js_code, lambda v: out(v))
     #self.wv.eval_js()
     #self.refresh_webview()
     #pass
@@ -50,10 +61,10 @@ class View(ui.View):
     #js_code = 'document.querySelector("#outlog").textContent'
     #self.wv.eval_js_async(js_code, lambda v: out(v))
     #js_code = 'location.protocol'
-    js_code = 'document'
+    js_code = 'document.querySelector("#mode-select")'
     out = self.wv.eval_js(js_code)
     print(out)
-  '''
+    '''
   
   def set_reload_btn(self):
     self.close_btn = self.create_btn('iob:ios7_refresh_outline_32')
