@@ -11,7 +11,6 @@ float beatToTime(float b) { return b / BPM * 60.0; }
 float sine(float p) { return sin(TAU * p); }
 float pitch(float p) { return pow(2.0, p / 12.0) * 440.0; }
 
-
 float kick(float t) {
   //float ce = cos(120.0 * t -28.0 * exp(-32.0 * t));
   //float a = asin(ce);
