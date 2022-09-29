@@ -55,7 +55,6 @@ class View(ui.View):
   def refresh_webview(self):
     self.wv.reload()
     self.wv.clear_cache()
-    
 
   def get_shader_code(self):
     js_code = 'getShaderCode()'
