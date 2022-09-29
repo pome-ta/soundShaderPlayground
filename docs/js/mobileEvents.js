@@ -70,7 +70,7 @@ export const mobileEventListeners = (editor) => {
   function statusLogDivSwipeMove(event) {
     event.preventDefault();
     endX = event.touches ? event.touches[0].pageX : event.pageX;
-    const moveDistance = Math.round((endX - startX) / 10); // xxx: スワイプでの移動距離数値
+    const moveDistance = Math.round((endX - startX) / 9); // xxx: スワイプでの移動距離数値
     caret += moveDistance;
     if (caret < headLine) {
       caret = headLine;

@@ -24,15 +24,19 @@ class View(ui.View):
   def __init__(self, url, *args, **kwargs):
     ui.View.__init__(self, *args, **kwargs)
     self.wv = WKWebView()
-    self.wv.add_script(js_func)
+
     self.wv.load_url(str(url))
+    self.wv.add_script(js_func)
+    self.wv.clear_cache()
+    self.wv.reload()
+
     self.wv.flex = 'WH'
     self.add_subview(self.wv)
     self.set_reload_btn()
 
   def will_close(self):
     self.get_shader_code()
-    self.wv.clear_cache()
+    self.refresh_webview()
 
   def set_reload_btn(self):
     self.refresh_btn = self.create_btn('iob:ios7_refresh_outline_32')
@@ -45,6 +49,11 @@ class View(ui.View):
 
   def reload_webview(self):
     self.get_shader_code()
+    self.wv.reload()
+
+  @ui.in_background
+  def refresh_webview(self):
+    self.wv.clear_cache()
     self.wv.reload()
 
   def get_shader_code(self):

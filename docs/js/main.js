@@ -253,7 +253,7 @@ loadSource = await fetchShader(fsPath);
 
 const fontSizeTheme = EditorView.theme({
   '&': {
-    fontSize: hasTouchScreen ? '0.8rem' : '1.0rem',
+    fontSize: hasTouchScreen ? '0.72rem' : '1.0rem',
   },
 });
 
@@ -339,36 +339,3 @@ if (hasTouchScreen()) {
   reIndentButton.addEventListener(eventName, initAudioContext);
 }
 
-
-//console.log(document.querySelector('#editor-div'))
-//console.log(window)
-
-const outlogEle = document.createElement('div');
-outlogEle.id = 'outlog'
-outlogEle.textContent = 'hoge'
-
-//console.log(window.webkit)
-//console.log(outlogEle)
-
-
-/*
-document.addEventListener('close', ()=> {
-  console.log('c')
-});
-*/
-
-/*
-
-window.addEventListener('beforeunload', (event) => {
-  // Cancel the event as stated by the standard.
-  event.preventDefault();
-  // Chrome requires returnValue to be set.
-  event.returnValue = '';
-  console.log('c')
-});*/
-
-/*
-function add(a, b) {
-  return a + b;
-}
-*/
