@@ -15,7 +15,7 @@ float pitch(float p) { return pow(2.0, p / 12.0) * 440.0; }
 vec2 mainSound(float time){
   float bpm = timeToBeat(time);
   
-  float kik_note = (cos(TAU * 32.0 * time));
+  float kik_note = acos(cos(TAU * 32.0 * time));
   float kik_sq = kik_note * fract(-1.0 * bpm);
   
   return vec2(kik_sq);
