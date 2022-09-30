@@ -253,7 +253,7 @@ loadSource = await fetchShader(fsPath);
 
 const fontSizeTheme = EditorView.theme({
   '&': {
-    fontSize: hasTouchScreen ? '0.64rem' : '1.0rem',
+    fontSize: hasTouchScreen ? '0.72rem' : '1.0rem',
   },
 });
 
