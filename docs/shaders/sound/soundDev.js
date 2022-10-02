@@ -38,12 +38,12 @@ vec2 mainSound(float time){
   float bass = saw(110.0 * time);
 
   float sq = smoothstep(0.4, 0.0, mod(bpm, 1.0));
-  float side = smoothstep(0.0, 0.6, mod(bpm, 1.0));
+  float side = smoothstep(0.2, 0.4, mod(bpm, 1.0));
   
   float kik_note = (cos(TAU * 32.0 * time));
   float kik_sq = kik_note * sq;
   outNote += kik_sq;
-  outNote += bass * side;
+  outNote += (bass * side) * fract(-0.5 * bpm);
   
   // return vec2(kik_sq, click);
   return vec2(outNote);
