@@ -338,4 +338,3 @@ if (hasTouchScreen()) {
   reIndentButton.addEventListener('click', updateSoundShader);
   reIndentButton.addEventListener(eventName, initAudioContext);
 }
-
