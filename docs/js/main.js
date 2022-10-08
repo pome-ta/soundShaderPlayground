@@ -280,7 +280,7 @@ const myKeyMpas = [{ key: 'Alt-Enter', run: updateSoundShader }];
 const extensions = [
   fontSizeTheme,
   ...initExtensions,
-  whitespaceShow,
+  //whitespaceShow,
   resOutlineTheme,
   bgRectangleTheme,
   //whitespaceShow,
