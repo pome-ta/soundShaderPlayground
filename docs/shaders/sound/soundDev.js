@@ -24,6 +24,5 @@ vec2 mainSound(float time){
   } else {
     return vec2(0.0);
   }
-  
 
 }
