@@ -19,6 +19,7 @@ float random(float t) {
 vec2 mainSound(float time){
   // float wave = sin(TAU * 440.0 * time);
   float wave = random(time);
+  uint f = floatBitsToUint(time);
   if (wave > 0.0) {
     return vec2(wave);
   } else {
