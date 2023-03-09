@@ -1,4 +1,23 @@
-// memo: 波形数値音響確認
+// memo: random hash 確認
+precision highp float;
+precision highp int;
+
+uint k = 0x456789abu;  // 算術積に使う大きな桁数の定数
+const uint UINT_MAX = 0xffffffffu;  // 符号なし整数の最大値
+
+uint uhash11(uint n) {
+  n ^= (n << 1);  // 1左シフトして`XOR`
+  n ^= (n >> 1);  // 1右シフトして`XOR`
+  n *= k;         // 算術積
+  n ^= (n << 1);  // 1左シフトして`XOR`
+  return n * k;   // 算術積
+}
+
+float hash11(float p) {
+  // 浮動小数点数のハッシュ関数
+  uint n = floatBitsToUint(p);  // ビット列を符号なし整数に変換
+  return float(uhash11(n)) / float(UINT_MAX);  // 値の正規化
+}
 
 const float PI = acos(-1.0);
 const float TAU = PI * 2.0;
@@ -17,12 +36,7 @@ float random(float t) {
 }
 
 vec2 mainSound(float time){
-  // float wave = sin(TAU * 440.0 * time);
-  float wave = random(time);
-  uint f = floatBitsToUint(time);
-  if (wave > 0.0) {
-    return vec2(wave);
-  } else {
-    return vec2(0.0);
-  }
+  float hash_l = hash11(time);
+  float random_r = random(time);
+  return vec2(hash_l, random_r);
 }
