@@ -39,11 +39,11 @@ float hash11(float p) {
 
 
 vec2 mainSound(float time){
-  float old_random = random(time);
-  //float hash_random = hash11(time);
+  //float old_random = random(time);
+  float hash_random = hash11(time)-0.5;
 
-  float sound_out = old_random;
-  //float sound_out = hash_random;
+  //float sound_out = old_random;
+  float sound_out = hash_random;
 
   return vec2(sound_out);
 }
