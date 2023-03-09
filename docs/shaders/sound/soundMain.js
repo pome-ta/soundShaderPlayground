@@ -1,3 +1,4 @@
+precision highp float;
 // memo: 
 #define BPM 120.0
 
