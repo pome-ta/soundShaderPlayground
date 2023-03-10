@@ -107,9 +107,9 @@ vec2 mainSound(float time) {
   sound += hiHat(bpm) * 0.4;
   sound += strings(bpm) * 0.125;
   sound += bass(bpm) * sine(-beatToTime(bpm)) * 0.3;
-  sound += tempo;
+  //sound += tempo;
   
-  // if (abs(sound) > 1.0) sound /= abs(sound);
+  if (abs(sound) > 1.0) sound /= abs(sound);
   
   return vec2(sound);
 }
