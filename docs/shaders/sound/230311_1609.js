@@ -1,7 +1,7 @@
 precision highp float;
 precision highp int;
 
-// memo: 
+// memo: 8ビートのベースコード乗せ
 
 #define BPM 90.0
 const float PI = acos(-1.0);
@@ -17,9 +17,10 @@ float pitch(float p) { return pow(2.0, p / 12.0) * 440.0; }
 
 vec2 mainSound(float time) {
   float bpm = timeToBeat(time);
-  float sound = sine(pitch(0.0) * time);
+  float sound = sine(pitch(0.0) *  beatToTime(bpm));
   
   return vec2(sound);
 }
+
 
 
