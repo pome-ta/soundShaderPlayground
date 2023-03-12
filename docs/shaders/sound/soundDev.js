@@ -17,7 +17,11 @@ float pitch(float p) { return pow(2.0, p / 12.0) * 440.0; }
 
 vec2 mainSound(float time) {
   float bpm = timeToBeat(time);
-  float sound = sine(pitch(acos(bpm)) * time);
+  float p;
+  bool l = true;
+  p = sin(bpm);
+  p -= fract(-bpm);
+  float sound = sine(pitch(p) * time);
 
   return vec2(sound);
 }
