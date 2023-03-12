@@ -1,4 +1,4 @@
-precision highp float;  /* 既に内部で呼んでるけど */
+//precision highp float;
 precision highp int;
 
 // memo: 
@@ -15,13 +15,19 @@ float beatToTime(float b) {return b / BPM * 60.0;}
 float sine(float p) { return sin(TAU * p); }
 float pitch(float p) { return pow(2.0, p / 12.0) * 440.0; }
 
-vec2 mainSound(float time) {
-  //float sound = sine(pitch(0.0) * (time ));
-  float hertz = 440.0;
-  float waveTime = clamp(sin(time), -1.0, 1.0) * 2.0;
-  float waveTone = sin(TAU * hertz * waveTime);
+vec2 mainSound(const float time) {
+  float bpm = timeToBeat(time);
+  float p;
+  bool swtch = true;
+  if (swtch) {
+    
+  }
+  vec2 loopng = vec2(-1.0, 1.0);
+  p = sin(bpm);
+  //p -= fract(-bpm);
+  float sound = sine(pitch(0.0) * sin(fract(time)));
 
-  return vec2(waveTone);
+  return vec2(sound);
 }
 
 
