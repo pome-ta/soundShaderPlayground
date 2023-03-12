@@ -25,7 +25,7 @@ vec2 mainSound(const float time) {
   vec2 loopng = vec2(-1.0, 1.0);
   p = sin(bpm);
   //p -= fract(-bpm);
-  float sound = sine(pitch(p) * time);
+  float sound = sine(pitch(0.0) * sin(fract(time)));
 
   return vec2(sound);
 }
