@@ -17,11 +17,13 @@ float pitch(float p) { return pow(2.0, p / 12.0) * 440.0; }
 
 vec2 mainSound(float time) {
   //float sound = sine(pitch(0.0) * (time ));
+  float tempo = sine((mod(time, 4.0) >= 1.0 ? 440.0 : 880.0) * time) * exp(-1e2 * fract(time));
+  
   float hertz = 440.0;
-  float waveTime = clamp(sin(time), -1.0, 1.0) * 2.0;
+  float waveTime = sin(fract(time / 4.0) * PI);
   float waveTone = sin(TAU * hertz * waveTime);
 
-  return vec2(waveTone);
+  return vec2(tempo,waveTone);
 }
 
 
