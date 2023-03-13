@@ -15,18 +15,19 @@ float beatToTime(float b) {return b / BPM * 60.0;}
 float sine(float p) { return sin(TAU * p); }
 float pitch(float p) { return pow(2.0, p / 12.0) * 440.0; }
 
-vec2 mainSound(float time) {
-  //float sound = sine(pitch(0.0) * (time ));
-  float tempo = sine((mod(time, 4.0) >= 1.0 ? 440.0 : 880.0) * time) * exp(-1e2 * fract(time));
-  
-  float hertz = mix(440.0 * time, 880.0 * time, fract(smoothstep(0.0, 1.0, sin(time * PI))));
-  //float hertz = clamp(sin(time), 440.0 * time, 880.0 * time);
-  
-  //float waveTime = time;
-  float waveTime = 1.0;
-  float waveTone = sin(TAU * hertz * waveTime);
 
-  return vec2(tempo,waveTone);
+
+float tri(in float freq, in float time) {
+  return -abs(1.0 - mod(freq * time * 2.0, 2.0));
 }
 
-
+vec2 mainSound( float time ) {
+  float freq = 440.0;
+  // freq *= pow(1.06 * 1.06, floor(mod(time, 6.0)));
+  freq *= pow(1.06 * 1.06, floor(mix(-1.0, 0.5, sin(time * PI))));
+  // freq *= pow(1.06 * 1.06, floor(mod(time, 6.0)) + sin(mod(time, 6.0)));
+  return vec2(
+    tri(freq, time) * sin(time * PI),
+    tri(freq * 1.5, time) * sin(time * PI)
+  );
+}
