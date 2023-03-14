@@ -27,7 +27,7 @@ vec2 mainSound( float time ) {
   freq *= pow(1.06 * 1.06, floor(mix(-1.0, 0.5, sin(time * PI))));
   // freq *= pow(1.06 * 1.06, floor(mod(time, 6.0)) + sin(mod(time, 6.0)));
   return vec2(
-    tri(freq, time) * sin(time * PI),
-    tri(freq * 1.5, time) * sin(time * PI)
+    tri(freq, time) * sin(time * PI)
+    //tri(freq * 1.5, time) * sin(time * PI)
   );
 }
