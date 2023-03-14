@@ -18,11 +18,8 @@ float pitch(float p) { return pow(2.0, p / 12.0) * 440.0; }
 
 vec2 mainSound( float time ) {
   float bpm = timeToBeat(time);
-  //float mul_freq = pitch(floor(mod(bpm, 2.0)));
-  float f4 = pitch(0.0);
-  float f8 = pitch(1.0);
-  float freq = mix(f4, f8, (mod(bpm, sin(bpm))));
-  float wave_tone = sine(freq * time);
+  float mul_freq = pitch(floor(mod(bpm, 2.0)));
+  float wave_tone = sine(mul_freq * time);
   
   return vec2(wave_tone);
 }

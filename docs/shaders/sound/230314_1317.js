@@ -16,14 +16,19 @@ float sine(float p) { return sin(TAU * p); }
 float pitch(float p) { return pow(2.0, p / 12.0) * 440.0; }
 
 
+
+float tri(in float freq, in float time) {
+  return -abs(1.0 - mod(freq * time * 2.0, 2.0));
+}
+
 vec2 mainSound( float time ) {
-  float bpm = timeToBeat(time);
-  //float mul_freq = pitch(floor(mod(bpm, 2.0)));
-  float f4 = pitch(0.0);
-  float f8 = pitch(1.0);
-  float freq = mix(f4, f8, (mod(bpm, sin(bpm))));
-  float wave_tone = sine(freq * time);
-  
-  return vec2(wave_tone);
+  float freq = 440.0;
+  freq *= pow(1.06 * 1.06, floor(mod(time, 6.0)));
+  //freq *= pow(1.06 * 1.06, floor(mix(-1.0, 0.5, sin(time * PI))));
+  // freq *= pow(1.06 * 1.06, floor(mod(time, 6.0)) + sin(mod(time, 6.0)));
+  return vec2(
+    tri(freq, time) * sin(time * PI)
+    //tri(freq * 1.5, time) * sin(time * PI)
+  );
 }
 
