@@ -20,7 +20,7 @@ vec2 mainSound( float time ) {
   float bpm = timeToBeat(time);
   //float mul_freq = pitch(floor(mod(bpm, 2.0)));
   float upDown = 2.0;
-  float mul_freq = fract(sin(bpm * PI)) * upDown + upDown;
+  float mul_freq = mod(sin(bpm * PI), 0.0) * upDown + upDown;
   float wave_tone = sine(pitch(mul_freq) * time);
   
   return vec2(wave_tone);
