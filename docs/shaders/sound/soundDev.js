@@ -17,19 +17,18 @@ float pitch(float p) { return pow(2.0, p / 12.0) * 440.0; }
 
 
 vec2 mainSound( float time ) {
-float bpm = timeToBeat(time);
-float tempo = sine((mod(bpm, 4.0) >= 1.0 ? 440.0 : 880.0) * time) *
+  float bpm = timeToBeat(time);
+  float tempo = sine((mod(bpm, 4.0) >= 1.0 ? 440.0 : 880.0) * time) *
 exp(-1e2 * fract(bpm));
 
-float base_freq = pitch(-64.0);
-float p = 0.0;
- p = sin(dot(bpm, PI));
+  float base_freq = pitch(-64.0);
+  float p = -sin(dot(bpm, PI));
 
-float move_freq = pitch( abs(p)) ;
-//float move_freq = pitch(asin(cos(bpm * PI)));
-float wave_tone = sine(base_freq * time + move_freq) * exp(-2.0 * fract(bpm));
-float smpl_tone = sine(440.0 * time);
+  float move_freq = pitch( abs(p)) ;
+  //float move_freq = pitch(asin(cos(bpm * PI)));
+  float wave_tone = sine(base_freq * time + move_freq) * exp(-2.0 * fract(bpm));
+  float smpl_tone = sine(440.0 * time);
 
-// return vec2(wave_tone);
-return vec2(wave_tone, smpl_tone + tempo);
+  return vec2(wave_tone);
+  // return vec2(wave_tone, smpl_tone + tempo);
 }
