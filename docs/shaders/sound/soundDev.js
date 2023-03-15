@@ -20,8 +20,8 @@ vec2 mainSound( float time ) {
   float bpm = timeToBeat(time);
   
   float base_freq = pitch(0.0);
-  float move_freq = pitch(bpm);
-  float wave_tone = sine(move_freq * time);
+  float move_freq = pitch(sin(bpm * PI) *2.0);
+  float wave_tone = sine( move_freq + base_freq* time);
   
   return vec2(wave_tone);
 }
