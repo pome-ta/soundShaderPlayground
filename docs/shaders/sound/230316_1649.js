@@ -14,7 +14,7 @@ float beatToTime(float b) {return b / BPM * 60.0; }
 vec2 mainSound(float time) {
   float bpm = timeToBeat(time);
   float signal = sin(TAU * 440.0 * time);
-  float outSound = min(1.0, fract(time)) * signal;
+  float outSound = max(0.0, 1.0 - fract(bpm)) * signal;
   
   return vec2(outSound);
 }
