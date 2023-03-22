@@ -21,7 +21,7 @@ vec2 mainSound(float time) {
   exp(-1e2 * fract(bpm));
   float outSound;
   float bdTone = pitch(0.0);
-  float bd = sin(TAU * 42.0 * time) * exp(-6.0 * fract(bpm));
+  float bd = sin(TAU * 42.0 * time) * exp(-4.0 * fract(bpm));
   
   outSound += bd;
   //outSound += tempo;
