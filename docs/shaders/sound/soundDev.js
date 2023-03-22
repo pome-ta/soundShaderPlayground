@@ -13,7 +13,16 @@ float beatToTime(float b) {return b / BPM * 60.0; }
 float sine(float p) { return sin(TAU * p); }
 float pitch(float p) { return pow(2.0, p / 12.0) * 440.0; }
 
-
+float bassDrum(in float t) {
+  float bdMaster;
+  float amp = exp(-0.75 * t);
+  float phase = 32.0 * t - 24.0 * exp(-1.25 * t);
+  float attack = amp * sine( phase );
+  bdMaster += attack;
+  
+  return bdMaster;
+  
+}
 
 vec2 mainSound(float time) {
   float bpm = timeToBeat(time);
@@ -21,7 +30,9 @@ vec2 mainSound(float time) {
   exp(-1e2 * fract(bpm));
   float outSound;
   float bdTone = pitch(0.0);
-  float bd = sin(TAU * 42.0 * time) * exp(-4.0 * fract(bpm));
+  
+  float kikTiming = mod(bpm, 1.0);
+  float bd = bassDrum(kikTiming);
   
   outSound += bd;
   //outSound += tempo;
