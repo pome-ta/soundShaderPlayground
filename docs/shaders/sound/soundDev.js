@@ -15,9 +15,11 @@ float pitch(float p) { return pow(2.0, p / 12.0) * 440.0; }
 
 float bassDrum(in float t) {
   float bdMaster;
-  float amp = exp(-0.75 * t);
-  float phase = 32.0 * t - 24.0 * exp(-1.25 * t);
-  float attack = amp * sine( phase );
+  float amp = exp(-0.5 * t);
+  //float phase = 32.0 * t - 24.0 * exp(-1.25 * t);
+  float phase = 24.0 * exp(-0.75 * t);
+  // float attack = sine(phase) * amp;
+  float attack = sine(phase);
   bdMaster += attack;
   
   return bdMaster;
