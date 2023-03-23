@@ -19,7 +19,6 @@ float bassDrum(in float t) {
   float attack = cos(TAU * 24.0 * exp(-0.75 * t)) * pow(fract(-t), 16.0);
   
   float p = sin(t * PI) / 4.0;
-  
   float moveFreq = pitch( (p) * 0.5);
   
   float body = sine(32.0 * t + moveFreq) * fract(-t-2.0);
@@ -37,7 +36,6 @@ vec2 mainSound(float time) {
   float tempo = sine((mod(bpm, 4.0) >= 1.0 ? 440.0 : 880.0) * time) * exp(-1e2 * fract(bpm));
   
   float outSound;
-
   float kikTiming = mod(bpm, 16.0) <= 15.0 ? mod(bpm, 1.0) : mod(bpm, 0.5);
 
   float sineTone = sine(pitch(0.0) * time * mix(0.0, 1.0,fract(-bpm)));
