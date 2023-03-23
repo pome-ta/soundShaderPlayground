@@ -36,9 +36,9 @@ vec2 mainSound(float time) {
   float tempo = sine((mod(bpm, 4.0) >= 1.0 ? 440.0 : 880.0) * time) * exp(-1e2 * fract(bpm));
   
   float outSound;
+  
   float kikTiming = mod(bpm, 16.0) <= 15.0 ? mod(bpm, 1.0) : mod(bpm, 0.5);
 
-  float sineTone = sine(pitch(0.0) * time * mix(0.0, 1.0,fract(-bpm)));
   float bd = bassDrum(kikTiming);
   float base_freq = pitch(0.0);
   float p = sin(bpm * PI) * 4.0;
