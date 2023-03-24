@@ -16,18 +16,10 @@ float pitch(float p) { return pow(2.0, p / 12.0) * 440.0; }
 float bassDrum(in float t) {
   float bdMaster;
   
-  float attack = cos(TAU * 24.0 * exp(-0.75 * t)) * pow(fract(-t), 16.0);
+  // todo: とりま他のを進める
   
-  float p = sin(t * PI) / 4.0;
-  float moveFreq = pitch( (p) * 0.5);
-  
-  // float body = sine(24.0 * t + moveFreq) * pow(fract(-t), 0.8);
-  float body = sine(24.0 * t + moveFreq) * pow(fract(-t), 2.0);
-
-  
-  // bdMaster += attack * 0.4;
-  bdMaster += body * 0.64;
-  bdMaster += mix(attack, body, t) * 0.5;
+  float attack = cos(TAU * 24.0 * exp(-1.0 * t));// * pow(fract(-t), 16.0);
+  bdMaster += attack;
   
   return bdMaster;
 
@@ -42,17 +34,9 @@ vec2 mainSound(float time) {
   float kikTiming = mod(bpm, 16.0) <= 15.0 ? mod(bpm, 1.0) : mod(bpm, 0.5);
 
   float bd = bassDrum(kikTiming);
-  float base_freq = pitch(0.0);
-  float p = sin(bpm * PI) * 4.0;
   
-  float move_freq = pitch( (p) * 0.5 + 0.5 );
-  float wave_tone = sine(base_freq * time + move_freq);
-  float smpl_tone = sine(440.0 * time);
 
   outSound += bd;
-  //outSound += wave_tone;
-  // outSound += tempo;
-  //outSound = outSound * 0.8;
   
   return vec2(outSound);
 }
