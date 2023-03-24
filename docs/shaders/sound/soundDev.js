@@ -25,7 +25,7 @@ float hash11(float p) {
 }
 
 float random1d(float p) {
-  return hash11(p) * 2.0 - 0.5;
+  return hash11(p) * 2.0 - 1.0;
 }
 
 
