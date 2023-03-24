@@ -6,6 +6,30 @@ precision highp int;
 const float PI = acos(-1.0);
 const float TAU = (PI * 2.0);
 
+// start hash
+uvec3 k = uvec3(0x456789abu, 0x6789ab45u, 0x89ab4567u);
+uvec3 u = uvec3(1, 2, 3);
+const uint UINT_MAX = 0xffffffffu;
+
+uint uhash11(uint n) {
+  n ^= (n << u.x);
+  n ^= (n >> u.x);
+  n *= k.x;
+  n ^= (n << u.x);
+  return n * k.x;
+}
+
+float hash11(float p) {
+  uint n = floatBitsToUint(p);
+  return float(uhash11(n)) / float(UINT_MAX);
+}
+
+float random1d(float p) {
+  return hash11(p) * 2.0 - 0.5;
+}
+
+
+
 /*sound common */
 float timeToBeat(float t) {return t / 60.0 * BPM; }
 float beatToTime(float b) {return b / BPM * 60.0; }
@@ -35,8 +59,13 @@ vec2 mainSound(float time) {
 
   float bd = bassDrum(kikTiming);
   
+  //float tone = sine(hash11(time));
+  float tone = sine(random1d(time));
+  
 
-  outSound += bd;
+  //outSound += bd;
+  outSound += tone;
+  
   
   return vec2(outSound);
 }
