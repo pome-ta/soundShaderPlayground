@@ -21,9 +21,11 @@ float bassDrum(in float t) {
   float p = sin(t * PI) / 4.0;
   float moveFreq = pitch( (p) * 0.5);
   
-  float body = sine(32.0 * t + moveFreq) * fract(-t-2.0);
+  // float body = sine(24.0 * t + moveFreq) * pow(fract(-t), 0.8);
+  float body = sine(24.0 * t + moveFreq) * pow(fract(-t), 2.0);
+
   
-  bdMaster += attack * 0.4;
+  // bdMaster += attack * 0.4;
   bdMaster += body * 0.64;
   bdMaster += mix(attack, body, t) * 0.5;
   
