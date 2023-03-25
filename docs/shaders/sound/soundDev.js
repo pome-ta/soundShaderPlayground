@@ -48,12 +48,10 @@ float bassDrum(in float t) {
 
 float hiHat(in float t) {
   float d = 16.0;
-  float b = mod(t, 16.0) > 3.0 && mod(t, 2.0) > 1.0;
+  bool b = mod(t, 16.0) > 3.0 && mod(t, 2.0) > 1.0;
+  return 0.0;
   
-  if (mod(t, 16.0) > 3.0 && mod(t, 2.0) > 1.0) {
-    return 0.0;
-  }
-  return rand(vec2(time * 32.0, 0.0)) * max(0.0, 1.0 - fract(t) * 4.0);
+  
 }
 
 vec2 mainSound(float time) {

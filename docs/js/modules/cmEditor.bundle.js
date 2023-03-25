@@ -5111,8 +5111,9 @@ function scanCompositionTree(pos, side, view, text, enterView, fromText) {
 }
 function posFromDOMInCompositionTree(node, offset, view, text) {
     if (view instanceof MarkView) {
+        let pos = 0;
         for (let child of view.children) {
-            let pos = 0, hasComp = contains(child.dom, text);
+            let hasComp = contains(child.dom, text);
             if (contains(child.dom, node))
                 return pos + (hasComp ? posFromDOMInCompositionTree(node, offset, child, text) : child.localPosFromDOM(node, offset));
             pos += hasComp ? text.nodeValue.length : child.length;
@@ -5146,7 +5147,7 @@ class WidgetBufferView extends ContentView {
         }
     }
     getSide() { return this.side; }
-    domAtPos(pos) { return DOMPos.before(this.dom); }
+    domAtPos(pos) { return this.side > 0 ? DOMPos.before(this.dom) : DOMPos.after(this.dom); }
     localPosFromDOM() { return 0; }
     domBoundsAround() { return null; }
     coordsAt(pos) {
@@ -5669,7 +5670,7 @@ class LineView extends ContentView {
     measureTextSize() {
         if (this.children.length == 0 || this.length > 20)
             return null;
-        let totalWidth = 0;
+        let totalWidth = 0, textHeight;
         for (let child of this.children) {
             if (!(child instanceof TextView) || /[^ -~]/.test(child.text))
                 return null;
@@ -5677,14 +5678,26 @@ class LineView extends ContentView {
             if (rects.length != 1)
                 return null;
             totalWidth += rects[0].width;
+            textHeight = rects[0].height;
         }
         return !totalWidth ? null : {
             lineHeight: this.dom.getBoundingClientRect().height,
-            charWidth: totalWidth / this.length
+            charWidth: totalWidth / this.length,
+            textHeight
         };
     }
     coordsAt(pos, side) {
-        return coordsInChildren(this, pos, side);
+        let rect = coordsInChildren(this, pos, side);
+        // Correct rectangle height for empty lines when the returned
+        // height is larger than the text height.
+        if (!this.children.length && rect && this.parent) {
+            let { heightOracle } = this.parent.view.viewState, height = rect.bottom - rect.top;
+            if (Math.abs(height - heightOracle.lineHeight) < 2 && heightOracle.textHeight < height) {
+                let dist = (height - heightOracle.textHeight) / 2;
+                return { top: rect.top + dist, bottom: rect.bottom - dist, left: rect.left, right: rect.left };
+            }
+        }
+        return rect;
     }
     become(_other) { return false; }
     get type() { return BlockType.Text; }
@@ -6964,7 +6977,7 @@ class DocView extends ContentView {
             }
         }
         // If no workable line exists, force a layout of a measurable element
-        let dummy = document.createElement("div"), lineHeight, charWidth;
+        let dummy = document.createElement("div"), lineHeight, charWidth, textHeight;
         dummy.className = "cm-line";
         dummy.style.width = "99999px";
         dummy.textContent = "abc def ghi jkl mno pqr stu";
@@ -6973,9 +6986,10 @@ class DocView extends ContentView {
             let rect = clientRectsFor(dummy.firstChild)[0];
             lineHeight = dummy.getBoundingClientRect().height;
             charWidth = rect ? rect.width / 27 : 7;
+            textHeight = rect ? rect.height : lineHeight;
             dummy.remove();
         });
-        return { lineHeight, charWidth };
+        return { lineHeight, charWidth, textHeight };
     }
     childCursor(pos = this.length) {
         // Move back to start of last element when possible, so that
@@ -7140,22 +7154,32 @@ class CompositionWidget extends WidgetType {
     ignoreEvent() { return false; }
     get customView() { return CompositionView; }
 }
-function nearbyTextNode(node, offset, side) {
-    for (;;) {
-        if (node.nodeType == 3)
-            return node;
-        if (node.nodeType == 1 && offset > 0 && side <= 0) {
-            node = node.childNodes[offset - 1];
-            offset = maxOffset(node);
+function nearbyTextNode(startNode, startOffset, side) {
+    if (side <= 0)
+        for (let node = startNode, offset = startOffset;;) {
+            if (node.nodeType == 3)
+                return node;
+            if (node.nodeType == 1 && offset > 0) {
+                node = node.childNodes[offset - 1];
+                offset = maxOffset(node);
+            }
+            else {
+                break;
+            }
         }
-        else if (node.nodeType == 1 && offset < node.childNodes.length && side >= 0) {
-            node = node.childNodes[offset];
-            offset = 0;
+    if (side >= 0)
+        for (let node = startNode, offset = startOffset;;) {
+            if (node.nodeType == 3)
+                return node;
+            if (node.nodeType == 1 && offset < node.childNodes.length && side >= 0) {
+                node = node.childNodes[offset];
+                offset = 0;
+            }
+            else {
+                break;
+            }
         }
-        else {
-            return null;
-        }
-    }
+    return null;
 }
 function nextToUneditable(node, offset) {
     if (node.nodeType != 1)
@@ -7591,8 +7615,16 @@ class InputState {
             this.registeredEvents.push(type);
         }
         view.scrollDOM.addEventListener("mousedown", (event) => {
-            if (event.target == view.scrollDOM && event.clientY > view.contentDOM.getBoundingClientRect().bottom)
+            if (event.target == view.scrollDOM && event.clientY > view.contentDOM.getBoundingClientRect().bottom) {
                 handleEvent(handlers.mousedown, event);
+                if (!event.defaultPrevented && event.button == 2) {
+                    // Make sure the content covers the entire scroller height, in order
+                    // to catch a native context menu click below it
+                    let start = view.contentDOM.style.minHeight;
+                    view.contentDOM.style.minHeight = "100%";
+                    setTimeout(() => view.contentDOM.style.minHeight = start, 200);
+                }
+            }
         });
         if (browser.chrome && browser.chrome_version == 102) { // FIXME remove at some point
             // On Chrome 102, viewport updates somehow stop wheel-based
@@ -8286,8 +8318,9 @@ class HeightOracle {
         this.lineWrapping = lineWrapping;
         this.doc = Text.empty;
         this.heightSamples = {};
-        this.lineHeight = 14;
+        this.lineHeight = 14; // The height of an entire line (line-height)
         this.charWidth = 7;
+        this.textHeight = 14; // The height of the actual font (font-size)
         this.lineLength = 30;
         // Used to track, during updateHeight, if any actual heights changed
         this.heightChanged = false;
@@ -8322,12 +8355,13 @@ class HeightOracle {
         }
         return newHeight;
     }
-    refresh(whiteSpace, lineHeight, charWidth, lineLength, knownHeights) {
+    refresh(whiteSpace, lineHeight, charWidth, textHeight, lineLength, knownHeights) {
         let lineWrapping = wrappingWhiteSpace.indexOf(whiteSpace) > -1;
         let changed = Math.round(lineHeight) != Math.round(this.lineHeight) || this.lineWrapping != lineWrapping;
         this.lineWrapping = lineWrapping;
         this.lineHeight = lineHeight;
         this.charWidth = charWidth;
+        this.textHeight = textHeight;
         this.lineLength = lineLength;
         if (changed) {
             this.heightSamples = {};
@@ -9174,8 +9208,8 @@ class ViewState {
             if (oracle.mustRefreshForHeights(lineHeights))
                 refresh = true;
             if (refresh || oracle.lineWrapping && Math.abs(contentWidth - this.contentDOMWidth) > oracle.charWidth) {
-                let { lineHeight, charWidth } = view.docView.measureTextSize();
-                refresh = lineHeight > 0 && oracle.refresh(whiteSpace, lineHeight, charWidth, contentWidth / charWidth, lineHeights);
+                let { lineHeight, charWidth, textHeight } = view.docView.measureTextSize();
+                refresh = lineHeight > 0 && oracle.refresh(whiteSpace, lineHeight, charWidth, textHeight, contentWidth / charWidth, lineHeights);
                 if (refresh) {
                     view.docView.minWidth = 0;
                     result |= 8 /* UpdateFlag.Geometry */;
@@ -14034,45 +14068,59 @@ class StringInput {
 new NodeProp({ perNode: true });
 
 let nextTagID = 0;
-/// Highlighting tags are markers that denote a highlighting category.
-/// They are [associated](#highlight.styleTags) with parts of a syntax
-/// tree by a language mode, and then mapped to an actual CSS style by
-/// a [highlighter](#highlight.Highlighter).
-///
-/// Because syntax tree node types and highlight styles have to be
-/// able to talk the same language, CodeMirror uses a mostly _closed_
-/// [vocabulary](#highlight.tags) of syntax tags (as opposed to
-/// traditional open string-based systems, which make it hard for
-/// highlighting themes to cover all the tokens produced by the
-/// various languages).
-///
-/// It _is_ possible to [define](#highlight.Tag^define) your own
-/// highlighting tags for system-internal use (where you control both
-/// the language package and the highlighter), but such tags will not
-/// be picked up by regular highlighters (though you can derive them
-/// from standard tags to allow highlighters to fall back to those).
+/**
+Highlighting tags are markers that denote a highlighting category.
+They are [associated](#highlight.styleTags) with parts of a syntax
+tree by a language mode, and then mapped to an actual CSS style by
+a [highlighter](#highlight.Highlighter).
+
+Because syntax tree node types and highlight styles have to be
+able to talk the same language, CodeMirror uses a mostly _closed_
+[vocabulary](#highlight.tags) of syntax tags (as opposed to
+traditional open string-based systems, which make it hard for
+highlighting themes to cover all the tokens produced by the
+various languages).
+
+It _is_ possible to [define](#highlight.Tag^define) your own
+highlighting tags for system-internal use (where you control both
+the language package and the highlighter), but such tags will not
+be picked up by regular highlighters (though you can derive them
+from standard tags to allow highlighters to fall back to those).
+*/
 class Tag {
-    /// @internal
+    /**
+    @internal
+    */
     constructor(
-    /// The set of this tag and all its parent tags, starting with
-    /// this one itself and sorted in order of decreasing specificity.
+    /**
+    The set of this tag and all its parent tags, starting with
+    this one itself and sorted in order of decreasing specificity.
+    */
     set, 
-    /// The base unmodified tag that this one is based on, if it's
-    /// modified @internal
+    /**
+    The base unmodified tag that this one is based on, if it's
+    modified @internal
+    */
     base, 
-    /// The modifiers applied to this.base @internal
+    /**
+    The modifiers applied to this.base @internal
+    */
     modified) {
         this.set = set;
         this.base = base;
         this.modified = modified;
-        /// @internal
+        /**
+        @internal
+        */
         this.id = nextTagID++;
     }
-    /// Define a new tag. If `parent` is given, the tag is treated as a
-    /// sub-tag of that parent, and
-    /// [highlighters](#highlight.tagHighlighter) that don't mention
-    /// this tag will try to fall back to the parent tag (or grandparent
-    /// tag, etc).
+    /**
+    Define a new tag. If `parent` is given, the tag is treated as a
+    sub-tag of that parent, and
+    [highlighters](#highlight.tagHighlighter) that don't mention
+    this tag will try to fall back to the parent tag (or grandparent
+    tag, etc).
+    */
     static define(parent) {
         if (parent === null || parent === void 0 ? void 0 : parent.base)
             throw new Error("Can not derive from a modified tag");
@@ -14083,16 +14131,18 @@ class Tag {
                 tag.set.push(t);
         return tag;
     }
-    /// Define a tag _modifier_, which is a function that, given a tag,
-    /// will return a tag that is a subtag of the original. Applying the
-    /// same modifier to a twice tag will return the same value (`m1(t1)
-    /// == m1(t1)`) and applying multiple modifiers will, regardless or
-    /// order, produce the same tag (`m1(m2(t1)) == m2(m1(t1))`).
-    ///
-    /// When multiple modifiers are applied to a given base tag, each
-    /// smaller set of modifiers is registered as a parent, so that for
-    /// example `m1(m2(m3(t1)))` is a subtype of `m1(m2(t1))`,
-    /// `m1(m3(t1)`, and so on.
+    /**
+    Define a tag _modifier_, which is a function that, given a tag,
+    will return a tag that is a subtag of the original. Applying the
+    same modifier to a twice tag will return the same value (`m1(t1)
+    == m1(t1)`) and applying multiple modifiers will, regardless or
+    order, produce the same tag (`m1(m2(t1)) == m2(m1(t1))`).
+    
+    When multiple modifiers are applied to a given base tag, each
+    smaller set of modifiers is registered as a parent, so that for
+    example `m1(m2(m3(t1)))` is a subtype of `m1(m2(t1))`,
+    `m1(m3(t1)`, and so on.
+    */
     static defineModifier() {
         let mod = new Modifier;
         return (tag) => {
@@ -14137,55 +14187,57 @@ function powerSet(array) {
     }
     return sets.sort((a, b) => b.length - a.length);
 }
-/// This function is used to add a set of tags to a language syntax
-/// via [`NodeSet.extend`](#common.NodeSet.extend) or
-/// [`LRParser.configure`](#lr.LRParser.configure).
-///
-/// The argument object maps node selectors to [highlighting
-/// tags](#highlight.Tag) or arrays of tags.
-///
-/// Node selectors may hold one or more (space-separated) node paths.
-/// Such a path can be a [node name](#common.NodeType.name), or
-/// multiple node names (or `*` wildcards) separated by slash
-/// characters, as in `"Block/Declaration/VariableName"`. Such a path
-/// matches the final node but only if its direct parent nodes are the
-/// other nodes mentioned. A `*` in such a path matches any parent,
-/// but only a single level—wildcards that match multiple parents
-/// aren't supported, both for efficiency reasons and because Lezer
-/// trees make it rather hard to reason about what they would match.)
-///
-/// A path can be ended with `/...` to indicate that the tag assigned
-/// to the node should also apply to all child nodes, even if they
-/// match their own style (by default, only the innermost style is
-/// used).
-///
-/// When a path ends in `!`, as in `Attribute!`, no further matching
-/// happens for the node's child nodes, and the entire node gets the
-/// given style.
-///
-/// In this notation, node names that contain `/`, `!`, `*`, or `...`
-/// must be quoted as JSON strings.
-///
-/// For example:
-///
-/// ```javascript
-/// parser.withProps(
-///   styleTags({
-///     // Style Number and BigNumber nodes
-///     "Number BigNumber": tags.number,
-///     // Style Escape nodes whose parent is String
-///     "String/Escape": tags.escape,
-///     // Style anything inside Attributes nodes
-///     "Attributes!": tags.meta,
-///     // Add a style to all content inside Italic nodes
-///     "Italic/...": tags.emphasis,
-///     // Style InvalidString nodes as both `string` and `invalid`
-///     "InvalidString": [tags.string, tags.invalid],
-///     // Style the node named "/" as punctuation
-///     '"/"': tags.punctuation
-///   })
-/// )
-/// ```
+/**
+This function is used to add a set of tags to a language syntax
+via [`NodeSet.extend`](#common.NodeSet.extend) or
+[`LRParser.configure`](#lr.LRParser.configure).
+
+The argument object maps node selectors to [highlighting
+tags](#highlight.Tag) or arrays of tags.
+
+Node selectors may hold one or more (space-separated) node paths.
+Such a path can be a [node name](#common.NodeType.name), or
+multiple node names (or `*` wildcards) separated by slash
+characters, as in `"Block/Declaration/VariableName"`. Such a path
+matches the final node but only if its direct parent nodes are the
+other nodes mentioned. A `*` in such a path matches any parent,
+but only a single level—wildcards that match multiple parents
+aren't supported, both for efficiency reasons and because Lezer
+trees make it rather hard to reason about what they would match.)
+
+A path can be ended with `/...` to indicate that the tag assigned
+to the node should also apply to all child nodes, even if they
+match their own style (by default, only the innermost style is
+used).
+
+When a path ends in `!`, as in `Attribute!`, no further matching
+happens for the node's child nodes, and the entire node gets the
+given style.
+
+In this notation, node names that contain `/`, `!`, `*`, or `...`
+must be quoted as JSON strings.
+
+For example:
+
+```javascript
+parser.withProps(
+  styleTags({
+    // Style Number and BigNumber nodes
+    "Number BigNumber": tags.number,
+    // Style Escape nodes whose parent is String
+    "String/Escape": tags.escape,
+    // Style anything inside Attributes nodes
+    "Attributes!": tags.meta,
+    // Add a style to all content inside Italic nodes
+    "Italic/...": tags.emphasis,
+    // Style InvalidString nodes as both `string` and `invalid`
+    "InvalidString": [tags.string, tags.invalid],
+    // Style the node named "/" as punctuation
+    '"/"': tags.punctuation
+  })
+)
+```
+*/
 function styleTags(spec) {
     let byName = Object.create(null);
     for (let prop in spec) {
@@ -14194,10 +14246,10 @@ function styleTags(spec) {
             tags = [tags];
         for (let part of prop.split(" "))
             if (part) {
-                let pieces = [], mode = 2 /* Mode.Normal */, rest = part;
+                let pieces = [], mode = 2 /* Normal */, rest = part;
                 for (let pos = 0;;) {
                     if (rest == "..." && pos > 0 && pos + 3 == part.length) {
-                        mode = 1 /* Mode.Inherit */;
+                        mode = 1 /* Inherit */;
                         break;
                     }
                     let m = /^"(?:[^"\\]|\\.)*?"|[^\/!]+/.exec(rest);
@@ -14209,7 +14261,7 @@ function styleTags(spec) {
                         break;
                     let next = part[pos++];
                     if (pos == part.length && next == "!") {
-                        mode = 0 /* Mode.Opaque */;
+                        mode = 0 /* Opaque */;
                         break;
                     }
                     if (next != "/")
@@ -14233,8 +14285,8 @@ class Rule {
         this.context = context;
         this.next = next;
     }
-    get opaque() { return this.mode == 0 /* Mode.Opaque */; }
-    get inherit() { return this.mode == 1 /* Mode.Inherit */; }
+    get opaque() { return this.mode == 0 /* Opaque */; }
+    get inherit() { return this.mode == 1 /* Inherit */; }
     sort(other) {
         if (!other || other.depth < this.depth) {
             this.next = other;
@@ -14245,10 +14297,12 @@ class Rule {
     }
     get depth() { return this.context ? this.context.length : 0; }
 }
-Rule.empty = new Rule([], 2 /* Mode.Normal */, null);
-/// Define a [highlighter](#highlight.Highlighter) from an array of
-/// tag/class pairs. Classes associated with more specific tags will
-/// take precedence.
+Rule.empty = new Rule([], 2 /* Normal */, null);
+/**
+Define a [highlighter](#highlight.Highlighter) from an array of
+tag/class pairs. Classes associated with more specific tags will
+take precedence.
+*/
 function tagHighlighter(tags, options) {
     let map = Object.create(null);
     for (let style of tags) {
@@ -14285,16 +14339,24 @@ function highlightTags(highlighters, tags) {
     }
     return result;
 }
-/// Highlight the given [tree](#common.Tree) with the given
-/// [highlighter](#highlight.Highlighter).
+/**
+Highlight the given [tree](#common.Tree) with the given
+[highlighter](#highlight.Highlighter).
+*/
 function highlightTree(tree, highlighter, 
-/// Assign styling to a region of the text. Will be called, in order
-/// of position, for any ranges where more than zero classes apply.
-/// `classes` is a space separated string of CSS classes.
+/**
+Assign styling to a region of the text. Will be called, in order
+of position, for any ranges where more than zero classes apply.
+`classes` is a space separated string of CSS classes.
+*/
 putStyle, 
-/// The start of the range to highlight.
+/**
+The start of the range to highlight.
+*/
 from = 0, 
-/// The end of the range.
+/**
+The end of the range.
+*/
 to = tree.length) {
     let builder = new HighlightBuilder(from, Array.isArray(highlighter) ? highlighter : [highlighter], putStyle);
     builder.highlightRange(tree.cursor(), from, to, "", builder.highlighters);
@@ -14332,7 +14394,7 @@ class HighlightBuilder {
             if (cls)
                 cls += " ";
             cls += tagCls;
-            if (rule.mode == 1 /* Mode.Inherit */)
+            if (rule.mode == 1 /* Inherit */)
                 inheritedClass += (inheritedClass ? " " : "") + tagCls;
         }
         this.startSpan(cursor.from, cls);
@@ -14379,9 +14441,11 @@ class HighlightBuilder {
         }
     }
 }
-/// Match a syntax node's [highlight rules](#highlight.styleTags). If
-/// there's a match, return its set of tags, and whether it is
-/// opaque (uses a `!`) or applies to all child nodes (`/...`).
+/**
+Match a syntax node's [highlight rules](#highlight.styleTags). If
+there's a match, return its set of tags, and whether it is
+opaque (uses a `!`) or applies to all child nodes (`/...`).
+*/
 function getStyleTags(node) {
     let rule = node.type.prop(ruleNodeProp);
     while (rule && rule.context && !node.matchContext(rule.context))
@@ -14390,268 +14454,440 @@ function getStyleTags(node) {
 }
 const t = Tag.define;
 const comment = t(), name = t(), typeName = t(name), propertyName = t(name), literal = t(), string = t(literal), number = t(literal), content = t(), heading = t(content), keyword = t(), operator = t(), punctuation = t(), bracket = t(punctuation), meta = t();
-/// The default set of highlighting [tags](#highlight.Tag).
-///
-/// This collection is heavily biased towards programming languages,
-/// and necessarily incomplete. A full ontology of syntactic
-/// constructs would fill a stack of books, and be impractical to
-/// write themes for. So try to make do with this set. If all else
-/// fails, [open an
-/// issue](https://github.com/codemirror/codemirror.next) to propose a
-/// new tag, or [define](#highlight.Tag^define) a local custom tag for
-/// your use case.
-///
-/// Note that it is not obligatory to always attach the most specific
-/// tag possible to an element—if your grammar can't easily
-/// distinguish a certain type of element (such as a local variable),
-/// it is okay to style it as its more general variant (a variable).
-/// 
-/// For tags that extend some parent tag, the documentation links to
-/// the parent.
+/**
+The default set of highlighting [tags](#highlight.Tag).
+
+This collection is heavily biased towards programming languages,
+and necessarily incomplete. A full ontology of syntactic
+constructs would fill a stack of books, and be impractical to
+write themes for. So try to make do with this set. If all else
+fails, [open an
+issue](https://github.com/codemirror/codemirror.next) to propose a
+new tag, or [define](#highlight.Tag^define) a local custom tag for
+your use case.
+
+Note that it is not obligatory to always attach the most specific
+tag possible to an element—if your grammar can't easily
+distinguish a certain type of element (such as a local variable),
+it is okay to style it as its more general variant (a variable).
+
+For tags that extend some parent tag, the documentation links to
+the parent.
+*/
 const tags = {
-    /// A comment.
+    /**
+    A comment.
+    */
     comment,
-    /// A line [comment](#highlight.tags.comment).
+    /**
+    A line [comment](#highlight.tags.comment).
+    */
     lineComment: t(comment),
-    /// A block [comment](#highlight.tags.comment).
+    /**
+    A block [comment](#highlight.tags.comment).
+    */
     blockComment: t(comment),
-    /// A documentation [comment](#highlight.tags.comment).
+    /**
+    A documentation [comment](#highlight.tags.comment).
+    */
     docComment: t(comment),
-    /// Any kind of identifier.
+    /**
+    Any kind of identifier.
+    */
     name,
-    /// The [name](#highlight.tags.name) of a variable.
+    /**
+    The [name](#highlight.tags.name) of a variable.
+    */
     variableName: t(name),
-    /// A type [name](#highlight.tags.name).
+    /**
+    A type [name](#highlight.tags.name).
+    */
     typeName: typeName,
-    /// A tag name (subtag of [`typeName`](#highlight.tags.typeName)).
+    /**
+    A tag name (subtag of [`typeName`](#highlight.tags.typeName)).
+    */
     tagName: t(typeName),
-    /// A property or field [name](#highlight.tags.name).
+    /**
+    A property or field [name](#highlight.tags.name).
+    */
     propertyName: propertyName,
-    /// An attribute name (subtag of [`propertyName`](#highlight.tags.propertyName)).
+    /**
+    An attribute name (subtag of [`propertyName`](#highlight.tags.propertyName)).
+    */
     attributeName: t(propertyName),
-    /// The [name](#highlight.tags.name) of a class.
+    /**
+    The [name](#highlight.tags.name) of a class.
+    */
     className: t(name),
-    /// A label [name](#highlight.tags.name).
+    /**
+    A label [name](#highlight.tags.name).
+    */
     labelName: t(name),
-    /// A namespace [name](#highlight.tags.name).
+    /**
+    A namespace [name](#highlight.tags.name).
+    */
     namespace: t(name),
-    /// The [name](#highlight.tags.name) of a macro.
+    /**
+    The [name](#highlight.tags.name) of a macro.
+    */
     macroName: t(name),
-    /// A literal value.
+    /**
+    A literal value.
+    */
     literal,
-    /// A string [literal](#highlight.tags.literal).
+    /**
+    A string [literal](#highlight.tags.literal).
+    */
     string,
-    /// A documentation [string](#highlight.tags.string).
+    /**
+    A documentation [string](#highlight.tags.string).
+    */
     docString: t(string),
-    /// A character literal (subtag of [string](#highlight.tags.string)).
+    /**
+    A character literal (subtag of [string](#highlight.tags.string)).
+    */
     character: t(string),
-    /// An attribute value (subtag of [string](#highlight.tags.string)).
+    /**
+    An attribute value (subtag of [string](#highlight.tags.string)).
+    */
     attributeValue: t(string),
-    /// A number [literal](#highlight.tags.literal).
+    /**
+    A number [literal](#highlight.tags.literal).
+    */
     number,
-    /// An integer [number](#highlight.tags.number) literal.
+    /**
+    An integer [number](#highlight.tags.number) literal.
+    */
     integer: t(number),
-    /// A floating-point [number](#highlight.tags.number) literal.
+    /**
+    A floating-point [number](#highlight.tags.number) literal.
+    */
     float: t(number),
-    /// A boolean [literal](#highlight.tags.literal).
+    /**
+    A boolean [literal](#highlight.tags.literal).
+    */
     bool: t(literal),
-    /// Regular expression [literal](#highlight.tags.literal).
+    /**
+    Regular expression [literal](#highlight.tags.literal).
+    */
     regexp: t(literal),
-    /// An escape [literal](#highlight.tags.literal), for example a
-    /// backslash escape in a string.
+    /**
+    An escape [literal](#highlight.tags.literal), for example a
+    backslash escape in a string.
+    */
     escape: t(literal),
-    /// A color [literal](#highlight.tags.literal).
+    /**
+    A color [literal](#highlight.tags.literal).
+    */
     color: t(literal),
-    /// A URL [literal](#highlight.tags.literal).
+    /**
+    A URL [literal](#highlight.tags.literal).
+    */
     url: t(literal),
-    /// A language keyword.
+    /**
+    A language keyword.
+    */
     keyword,
-    /// The [keyword](#highlight.tags.keyword) for the self or this
-    /// object.
+    /**
+    The [keyword](#highlight.tags.keyword) for the self or this
+    object.
+    */
     self: t(keyword),
-    /// The [keyword](#highlight.tags.keyword) for null.
+    /**
+    The [keyword](#highlight.tags.keyword) for null.
+    */
     null: t(keyword),
-    /// A [keyword](#highlight.tags.keyword) denoting some atomic value.
+    /**
+    A [keyword](#highlight.tags.keyword) denoting some atomic value.
+    */
     atom: t(keyword),
-    /// A [keyword](#highlight.tags.keyword) that represents a unit.
+    /**
+    A [keyword](#highlight.tags.keyword) that represents a unit.
+    */
     unit: t(keyword),
-    /// A modifier [keyword](#highlight.tags.keyword).
+    /**
+    A modifier [keyword](#highlight.tags.keyword).
+    */
     modifier: t(keyword),
-    /// A [keyword](#highlight.tags.keyword) that acts as an operator.
+    /**
+    A [keyword](#highlight.tags.keyword) that acts as an operator.
+    */
     operatorKeyword: t(keyword),
-    /// A control-flow related [keyword](#highlight.tags.keyword).
+    /**
+    A control-flow related [keyword](#highlight.tags.keyword).
+    */
     controlKeyword: t(keyword),
-    /// A [keyword](#highlight.tags.keyword) that defines something.
+    /**
+    A [keyword](#highlight.tags.keyword) that defines something.
+    */
     definitionKeyword: t(keyword),
-    /// A [keyword](#highlight.tags.keyword) related to defining or
-    /// interfacing with modules.
+    /**
+    A [keyword](#highlight.tags.keyword) related to defining or
+    interfacing with modules.
+    */
     moduleKeyword: t(keyword),
-    /// An operator.
+    /**
+    An operator.
+    */
     operator,
-    /// An [operator](#highlight.tags.operator) that dereferences something.
+    /**
+    An [operator](#highlight.tags.operator) that dereferences something.
+    */
     derefOperator: t(operator),
-    /// Arithmetic-related [operator](#highlight.tags.operator).
+    /**
+    Arithmetic-related [operator](#highlight.tags.operator).
+    */
     arithmeticOperator: t(operator),
-    /// Logical [operator](#highlight.tags.operator).
+    /**
+    Logical [operator](#highlight.tags.operator).
+    */
     logicOperator: t(operator),
-    /// Bit [operator](#highlight.tags.operator).
+    /**
+    Bit [operator](#highlight.tags.operator).
+    */
     bitwiseOperator: t(operator),
-    /// Comparison [operator](#highlight.tags.operator).
+    /**
+    Comparison [operator](#highlight.tags.operator).
+    */
     compareOperator: t(operator),
-    /// [Operator](#highlight.tags.operator) that updates its operand.
+    /**
+    [Operator](#highlight.tags.operator) that updates its operand.
+    */
     updateOperator: t(operator),
-    /// [Operator](#highlight.tags.operator) that defines something.
+    /**
+    [Operator](#highlight.tags.operator) that defines something.
+    */
     definitionOperator: t(operator),
-    /// Type-related [operator](#highlight.tags.operator).
+    /**
+    Type-related [operator](#highlight.tags.operator).
+    */
     typeOperator: t(operator),
-    /// Control-flow [operator](#highlight.tags.operator).
+    /**
+    Control-flow [operator](#highlight.tags.operator).
+    */
     controlOperator: t(operator),
-    /// Program or markup punctuation.
+    /**
+    Program or markup punctuation.
+    */
     punctuation,
-    /// [Punctuation](#highlight.tags.punctuation) that separates
-    /// things.
+    /**
+    [Punctuation](#highlight.tags.punctuation) that separates
+    things.
+    */
     separator: t(punctuation),
-    /// Bracket-style [punctuation](#highlight.tags.punctuation).
+    /**
+    Bracket-style [punctuation](#highlight.tags.punctuation).
+    */
     bracket,
-    /// Angle [brackets](#highlight.tags.bracket) (usually `<` and `>`
-    /// tokens).
+    /**
+    Angle [brackets](#highlight.tags.bracket) (usually `<` and `>`
+    tokens).
+    */
     angleBracket: t(bracket),
-    /// Square [brackets](#highlight.tags.bracket) (usually `[` and `]`
-    /// tokens).
+    /**
+    Square [brackets](#highlight.tags.bracket) (usually `[` and `]`
+    tokens).
+    */
     squareBracket: t(bracket),
-    /// Parentheses (usually `(` and `)` tokens). Subtag of
-    /// [bracket](#highlight.tags.bracket).
+    /**
+    Parentheses (usually `(` and `)` tokens). Subtag of
+    [bracket](#highlight.tags.bracket).
+    */
     paren: t(bracket),
-    /// Braces (usually `{` and `}` tokens). Subtag of
-    /// [bracket](#highlight.tags.bracket).
+    /**
+    Braces (usually `{` and `}` tokens). Subtag of
+    [bracket](#highlight.tags.bracket).
+    */
     brace: t(bracket),
-    /// Content, for example plain text in XML or markup documents.
+    /**
+    Content, for example plain text in XML or markup documents.
+    */
     content,
-    /// [Content](#highlight.tags.content) that represents a heading.
+    /**
+    [Content](#highlight.tags.content) that represents a heading.
+    */
     heading,
-    /// A level 1 [heading](#highlight.tags.heading).
+    /**
+    A level 1 [heading](#highlight.tags.heading).
+    */
     heading1: t(heading),
-    /// A level 2 [heading](#highlight.tags.heading).
+    /**
+    A level 2 [heading](#highlight.tags.heading).
+    */
     heading2: t(heading),
-    /// A level 3 [heading](#highlight.tags.heading).
+    /**
+    A level 3 [heading](#highlight.tags.heading).
+    */
     heading3: t(heading),
-    /// A level 4 [heading](#highlight.tags.heading).
+    /**
+    A level 4 [heading](#highlight.tags.heading).
+    */
     heading4: t(heading),
-    /// A level 5 [heading](#highlight.tags.heading).
+    /**
+    A level 5 [heading](#highlight.tags.heading).
+    */
     heading5: t(heading),
-    /// A level 6 [heading](#highlight.tags.heading).
+    /**
+    A level 6 [heading](#highlight.tags.heading).
+    */
     heading6: t(heading),
-    /// A prose separator (such as a horizontal rule).
+    /**
+    A prose separator (such as a horizontal rule).
+    */
     contentSeparator: t(content),
-    /// [Content](#highlight.tags.content) that represents a list.
+    /**
+    [Content](#highlight.tags.content) that represents a list.
+    */
     list: t(content),
-    /// [Content](#highlight.tags.content) that represents a quote.
+    /**
+    [Content](#highlight.tags.content) that represents a quote.
+    */
     quote: t(content),
-    /// [Content](#highlight.tags.content) that is emphasized.
+    /**
+    [Content](#highlight.tags.content) that is emphasized.
+    */
     emphasis: t(content),
-    /// [Content](#highlight.tags.content) that is styled strong.
+    /**
+    [Content](#highlight.tags.content) that is styled strong.
+    */
     strong: t(content),
-    /// [Content](#highlight.tags.content) that is part of a link.
+    /**
+    [Content](#highlight.tags.content) that is part of a link.
+    */
     link: t(content),
-    /// [Content](#highlight.tags.content) that is styled as code or
-    /// monospace.
+    /**
+    [Content](#highlight.tags.content) that is styled as code or
+    monospace.
+    */
     monospace: t(content),
-    /// [Content](#highlight.tags.content) that has a strike-through
-    /// style.
+    /**
+    [Content](#highlight.tags.content) that has a strike-through
+    style.
+    */
     strikethrough: t(content),
-    /// Inserted text in a change-tracking format.
+    /**
+    Inserted text in a change-tracking format.
+    */
     inserted: t(),
-    /// Deleted text.
+    /**
+    Deleted text.
+    */
     deleted: t(),
-    /// Changed text.
+    /**
+    Changed text.
+    */
     changed: t(),
-    /// An invalid or unsyntactic element.
+    /**
+    An invalid or unsyntactic element.
+    */
     invalid: t(),
-    /// Metadata or meta-instruction.
+    /**
+    Metadata or meta-instruction.
+    */
     meta,
-    /// [Metadata](#highlight.tags.meta) that applies to the entire
-    /// document.
+    /**
+    [Metadata](#highlight.tags.meta) that applies to the entire
+    document.
+    */
     documentMeta: t(meta),
-    /// [Metadata](#highlight.tags.meta) that annotates or adds
-    /// attributes to a given syntactic element.
+    /**
+    [Metadata](#highlight.tags.meta) that annotates or adds
+    attributes to a given syntactic element.
+    */
     annotation: t(meta),
-    /// Processing instruction or preprocessor directive. Subtag of
-    /// [meta](#highlight.tags.meta).
+    /**
+    Processing instruction or preprocessor directive. Subtag of
+    [meta](#highlight.tags.meta).
+    */
     processingInstruction: t(meta),
-    /// [Modifier](#highlight.Tag^defineModifier) that indicates that a
-    /// given element is being defined. Expected to be used with the
-    /// various [name](#highlight.tags.name) tags.
+    /**
+    [Modifier](#highlight.Tag^defineModifier) that indicates that a
+    given element is being defined. Expected to be used with the
+    various [name](#highlight.tags.name) tags.
+    */
     definition: Tag.defineModifier(),
-    /// [Modifier](#highlight.Tag^defineModifier) that indicates that
-    /// something is constant. Mostly expected to be used with
-    /// [variable names](#highlight.tags.variableName).
+    /**
+    [Modifier](#highlight.Tag^defineModifier) that indicates that
+    something is constant. Mostly expected to be used with
+    [variable names](#highlight.tags.variableName).
+    */
     constant: Tag.defineModifier(),
-    /// [Modifier](#highlight.Tag^defineModifier) used to indicate that
-    /// a [variable](#highlight.tags.variableName) or [property
-    /// name](#highlight.tags.propertyName) is being called or defined
-    /// as a function.
+    /**
+    [Modifier](#highlight.Tag^defineModifier) used to indicate that
+    a [variable](#highlight.tags.variableName) or [property
+    name](#highlight.tags.propertyName) is being called or defined
+    as a function.
+    */
     function: Tag.defineModifier(),
-    /// [Modifier](#highlight.Tag^defineModifier) that can be applied to
-    /// [names](#highlight.tags.name) to indicate that they belong to
-    /// the language's standard environment.
+    /**
+    [Modifier](#highlight.Tag^defineModifier) that can be applied to
+    [names](#highlight.tags.name) to indicate that they belong to
+    the language's standard environment.
+    */
     standard: Tag.defineModifier(),
-    /// [Modifier](#highlight.Tag^defineModifier) that indicates a given
-    /// [names](#highlight.tags.name) is local to some scope.
+    /**
+    [Modifier](#highlight.Tag^defineModifier) that indicates a given
+    [names](#highlight.tags.name) is local to some scope.
+    */
     local: Tag.defineModifier(),
-    /// A generic variant [modifier](#highlight.Tag^defineModifier) that
-    /// can be used to tag language-specific alternative variants of
-    /// some common tag. It is recommended for themes to define special
-    /// forms of at least the [string](#highlight.tags.string) and
-    /// [variable name](#highlight.tags.variableName) tags, since those
-    /// come up a lot.
+    /**
+    A generic variant [modifier](#highlight.Tag^defineModifier) that
+    can be used to tag language-specific alternative variants of
+    some common tag. It is recommended for themes to define special
+    forms of at least the [string](#highlight.tags.string) and
+    [variable name](#highlight.tags.variableName) tags, since those
+    come up a lot.
+    */
     special: Tag.defineModifier()
 };
-/// This is a highlighter that adds stable, predictable classes to
-/// tokens, for styling with external CSS.
-///
-/// The following tags are mapped to their name prefixed with `"tok-"`
-/// (for example `"tok-comment"`):
-///
-/// * [`link`](#highlight.tags.link)
-/// * [`heading`](#highlight.tags.heading)
-/// * [`emphasis`](#highlight.tags.emphasis)
-/// * [`strong`](#highlight.tags.strong)
-/// * [`keyword`](#highlight.tags.keyword)
-/// * [`atom`](#highlight.tags.atom)
-/// * [`bool`](#highlight.tags.bool)
-/// * [`url`](#highlight.tags.url)
-/// * [`labelName`](#highlight.tags.labelName)
-/// * [`inserted`](#highlight.tags.inserted)
-/// * [`deleted`](#highlight.tags.deleted)
-/// * [`literal`](#highlight.tags.literal)
-/// * [`string`](#highlight.tags.string)
-/// * [`number`](#highlight.tags.number)
-/// * [`variableName`](#highlight.tags.variableName)
-/// * [`typeName`](#highlight.tags.typeName)
-/// * [`namespace`](#highlight.tags.namespace)
-/// * [`className`](#highlight.tags.className)
-/// * [`macroName`](#highlight.tags.macroName)
-/// * [`propertyName`](#highlight.tags.propertyName)
-/// * [`operator`](#highlight.tags.operator)
-/// * [`comment`](#highlight.tags.comment)
-/// * [`meta`](#highlight.tags.meta)
-/// * [`punctuation`](#highlight.tags.punctuation)
-/// * [`invalid`](#highlight.tags.invalid)
-///
-/// In addition, these mappings are provided:
-///
-/// * [`regexp`](#highlight.tags.regexp),
-///   [`escape`](#highlight.tags.escape), and
-///   [`special`](#highlight.tags.special)[`(string)`](#highlight.tags.string)
-///   are mapped to `"tok-string2"`
-/// * [`special`](#highlight.tags.special)[`(variableName)`](#highlight.tags.variableName)
-///   to `"tok-variableName2"`
-/// * [`local`](#highlight.tags.local)[`(variableName)`](#highlight.tags.variableName)
-///   to `"tok-variableName tok-local"`
-/// * [`definition`](#highlight.tags.definition)[`(variableName)`](#highlight.tags.variableName)
-///   to `"tok-variableName tok-definition"`
-/// * [`definition`](#highlight.tags.definition)[`(propertyName)`](#highlight.tags.propertyName)
-///   to `"tok-propertyName tok-definition"`
+/**
+This is a highlighter that adds stable, predictable classes to
+tokens, for styling with external CSS.
+
+The following tags are mapped to their name prefixed with `"tok-"`
+(for example `"tok-comment"`):
+
+* [`link`](#highlight.tags.link)
+* [`heading`](#highlight.tags.heading)
+* [`emphasis`](#highlight.tags.emphasis)
+* [`strong`](#highlight.tags.strong)
+* [`keyword`](#highlight.tags.keyword)
+* [`atom`](#highlight.tags.atom)
+* [`bool`](#highlight.tags.bool)
+* [`url`](#highlight.tags.url)
+* [`labelName`](#highlight.tags.labelName)
+* [`inserted`](#highlight.tags.inserted)
+* [`deleted`](#highlight.tags.deleted)
+* [`literal`](#highlight.tags.literal)
+* [`string`](#highlight.tags.string)
+* [`number`](#highlight.tags.number)
+* [`variableName`](#highlight.tags.variableName)
+* [`typeName`](#highlight.tags.typeName)
+* [`namespace`](#highlight.tags.namespace)
+* [`className`](#highlight.tags.className)
+* [`macroName`](#highlight.tags.macroName)
+* [`propertyName`](#highlight.tags.propertyName)
+* [`operator`](#highlight.tags.operator)
+* [`comment`](#highlight.tags.comment)
+* [`meta`](#highlight.tags.meta)
+* [`punctuation`](#highlight.tags.punctuation)
+* [`invalid`](#highlight.tags.invalid)
+
+In addition, these mappings are provided:
+
+* [`regexp`](#highlight.tags.regexp),
+  [`escape`](#highlight.tags.escape), and
+  [`special`](#highlight.tags.special)[`(string)`](#highlight.tags.string)
+  are mapped to `"tok-string2"`
+* [`special`](#highlight.tags.special)[`(variableName)`](#highlight.tags.variableName)
+  to `"tok-variableName2"`
+* [`local`](#highlight.tags.local)[`(variableName)`](#highlight.tags.variableName)
+  to `"tok-variableName tok-local"`
+* [`definition`](#highlight.tags.definition)[`(variableName)`](#highlight.tags.variableName)
+  to `"tok-variableName tok-definition"`
+* [`definition`](#highlight.tags.definition)[`(propertyName)`](#highlight.tags.propertyName)
+  to `"tok-propertyName tok-definition"`
+*/
 tagHighlighter([
     { tag: tags.link, class: "tok-link" },
     { tag: tags.heading, class: "tok-heading" },
