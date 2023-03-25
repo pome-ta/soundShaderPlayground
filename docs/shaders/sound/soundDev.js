@@ -29,7 +29,6 @@ float random1d(float p) {
 }
 
 
-
 /*sound common */
 float timeToBeat(float t) {return t / 60.0 * BPM; }
 float beatToTime(float b) {return b / BPM * 60.0; }
@@ -37,17 +36,16 @@ float beatToTime(float b) {return b / BPM * 60.0; }
 float sine(float p) { return sin(TAU * p); }
 float pitch(float p) { return pow(2.0, p / 12.0) * 440.0; }
 
+
 float bassDrum(in float t) {
   float bdMaster;
-  
   // todo: とりま他のを進める
-  
   float attack = cos(TAU * 24.0 * exp(-1.0 * t));// * pow(fract(-t), 16.0);
   bdMaster += attack;
   
   return bdMaster;
-
 }
+
 
 vec2 mainSound(float time) {
   float bpm = timeToBeat(time);
@@ -65,7 +63,6 @@ vec2 mainSound(float time) {
 
   //outSound += bd;
   outSound += tone;
-  
   
   return vec2(outSound);
 }
